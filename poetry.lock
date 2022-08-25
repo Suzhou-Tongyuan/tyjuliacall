@@ -152,10 +152,18 @@ category = "dev"
 optional = false
 python-versions = "*"
 
+[[package]]
+name = "wisepy2"
+version = "1.3"
+description = "simple CLI framework"
+category = "main"
+optional = false
+python-versions = "*"
+
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "467d5ae68441063ec765248576a3b11d8a574bdaa27a212f322e8a60e878fe6a"
+content-hash = "ece2bcf0ca03c7ee0e0fcfb010f1f3dbca5f56a5dd1cc74bcd67878a160b1ca3"
 
 [metadata.files]
 atomicwrites = [
@@ -212,4 +220,7 @@ semantic-version = [
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
+]
+wisepy2 = [
+    {file = "wisepy2-1.3-py3-none-any.whl", hash = "sha256:cb34b27fa2d73e59dac173fad6ed57a470d0c49d36ff9ce0dcfe3c18c6937185"},
 ]
