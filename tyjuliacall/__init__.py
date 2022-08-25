@@ -237,10 +237,9 @@ def setup():
 
     from julia import Pkg  # type: ignore
 
-    if Environment.TYPY_JL_SYSIMAGE:
-        Environment.TYPY_JL_SYSIMAGE = typing.cast(
-            str, LegacyJuliaEvaluator["unsafe_string(Base.JLOptions().image_file)"]
-        )
+    Environment.TYPY_JL_SYSIMAGE = typing.cast(
+        str, LegacyJuliaEvaluator["unsafe_string(Base.JLOptions().image_file)"]
+    )
     import juliacall
 
     Pkg.activate()  # workaround to prevent juliacall from creating it own project
