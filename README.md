@@ -35,7 +35,9 @@
 
 此外，对Julia用户，如果想要使用PythonCall前，应先导入PyCall。
 
-## 镜像加速 (TODO)
+## 镜像加速
+
+Python用户设置`TYPY_JL_SYSIMAGE`设置为镜像路径。
 
 
 ## Troubleshooting
