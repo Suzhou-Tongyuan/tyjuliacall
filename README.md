@@ -37,7 +37,14 @@
 
 ## 镜像加速
 
-Python用户设置`TYPY_JL_SYSIMAGE`设置为镜像路径。
+创建镜像：运行以下命令：
+
+    ```bash
+    python -c 'import tyjuliacall;tyjuliacall.create_image(out = "<输出的镜像路径>")'
+    ```
+
+使用镜像：Python用户设置`TYPY_JL_SYSIMAGE`为镜像路径。
+
 
 
 ## Troubleshooting
