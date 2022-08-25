@@ -59,7 +59,9 @@
     mk-ty-sysimage PyCall PythonCall TySignalProcessing DataFrames --out a.dll --python xxx/python.exe
     ```
 
-使用映像：Python用户设置`TYPY_JL_SYSIMAGE`为映像路径，且设置`TYPY_NOSETUP=true`。
+    注意：如果用`--python`指定Python环境，则该python需要已安装`tyjuliacall`。
+
+使用映像：Python用户设置`TYPY_JL_SYSIMAGE`为映像路径，且设置`TYPY_NOSETUP=true`, 并`import tyjuliacall`。
 
 
 ## 数据转换规则
