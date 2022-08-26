@@ -1,1 +1,1 @@
-mk-ty-sysimage.exe --python "C:\Users\Public\TongYuan\.julia\conda\3\python.exe" --out "conda.dll" DataFrames DifferentialEquations DataDrivenDiffEq ControlSystems SignalAnalysis CategoricalArrays Colors Conda PyCall TimeZones PythonCall FileIO ImageIO ImageMagick Images TiffImages HDF5 CSV XLSX MAT OhMyREPL
+mk-ty-sysimage.exe DataFrames DifferentialEquations DataDrivenDiffEq ControlSystems SignalAnalysis CategoricalArrays Colors Conda PyCall TimeZones PythonCall FileIO ImageIO ImageMagick Images TiffImages HDF5 CSV XLSX MAT OhMyREPL
