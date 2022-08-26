@@ -34,7 +34,11 @@
     2. 映像从Julia而非Python中生成
     3. 映像同时包含`PyCall`和`PythonCall`
 
-2. 安装Python版本>=3.7，要求Python以动态链接方式编译，并预装matplotlib。
+2. 安装Python版本>=3.7，要求Python以动态链接方式编译，并预装如下包:
+
+    - matplotlib (TyPlot)
+    - PyQt5 (TyPlot)
+    - scipy (TySignalProcessing)
 
 3. 安装`tyjuliacall`:
 

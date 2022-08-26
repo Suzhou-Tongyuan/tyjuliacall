@@ -239,7 +239,7 @@ def check_or_build(jl_exe: str):
                 [
                     *EXTRA_OPTS,
                     "-e",
-                    r'import Pkg;Pkg.build("PyCall");import PyCall;',
+                    r'import Pkg;Pkg.build();import PyCall;',
                 ],
                 supress_errors=False,
             )
@@ -248,7 +248,6 @@ def check_or_build(jl_exe: str):
             raise RuntimeError(
                 "julia or PyCall.jl is not installed or failed to build."
             )
-
 
 def setup():
     global BASE_IMAGE
@@ -262,17 +261,21 @@ def setup():
         check_or_build(jl_exe)
     Environment.JULIA_PYTHONCALL_EXE = "@PyCall"
     # sync PyCall and PythonCall
+    from julia import Julia
     if Environment.TYPY_JL_SYSIMAGE:
-        from julia.core import Julia
+        BASE_IMAGE = Environment.TYPY_JL_SYSIMAGE
+    else:
+        sysimage = invoke_julia(jl_exe, ['-e', 'println(unsafe_string(Base.JLOptions().image_file))'])
+        if not sysimage or not isinstance(sysimage, bytes) or not sysimage.strip():
+            raise ValueError("Julia.exe failed")
+        BASE_IMAGE = sysimage.strip().decode('utf-8')
 
-        Julia(sysimage=Environment.TYPY_JL_SYSIMAGE)
-
-    from juliacall import Main  # type: ignore
+    print(BASE_IMAGE)
+    Environment.PYTHON_JULIACALL_SYSIMAGE = BASE_IMAGE
+    Julia(sysimage=BASE_IMAGE)
     from julia import Pkg  # type: ignore
-
-    BASE_IMAGE = typing.cast(
-        str, JuliaEvaluator["unsafe_string(Base.JLOptions().image_file)"]
-    )
+    from juliacall import Main  # type: ignore
+    
     Pkg.activate()  # workaround to prevent juliacall from creating it own project
 
 
