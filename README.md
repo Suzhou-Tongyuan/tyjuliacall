@@ -50,7 +50,7 @@
 
 ## 映像加速
 
-1. 创建映像 (需要在当前环境中安装 `tyjuliacall`)
+1. 使用当前环境中的Python和Julia创建映像 (需要在当前环境中安装 `tyjuliacall`)
 
     ```bash
     mk-ty-sysimage <Julia包1> <Julia包2> ... --out <映像输出路径> --python <可选：使用的Python解释器路径，默认为当前Python>
@@ -59,12 +59,27 @@
     mk-ty-sysimage PyCall PythonCall TySignalProcessing DataFrames --out a.dll --python xxx/python.exe
     ```
 
-    注意：如果用`--python`指定Python环境，则该python需要已安装`tyjuliacall`。
+    注意：如果用`--python`指定Python环境，则该python需要已安装`tyjuliacall`。**如果该环境是conda环境，则需要预先开启相应的conda环境。**
+
+    如果需要使用Syslab自带的Python制作映像，建议使用Syslab配置环境，流程如下：
+
+    1. 在Syslab中选择Python解释器，激活环境。如果Syslab切换/激活Python环境失败，尝试启动VSCode进行相同操作。
+
+    2. 激活Python环境后，在Syslab/VSCode终端中使用`mk-ty-sysimage`命令。
 
 使用映像：Python用户设置`TYPY_JL_SYSIMAGE`为映像路径，且设置`TYPY_NOSETUP=true`, 并`import tyjuliacall`。
 
 
-## 数据转换规则
+## 受信赖的数据转换规则 (TODO)
+
+JuliaPython:
+
+| Julia        | Python    |
+|:------------:|:---------:|
+| `nothing`    | `None`    |
+| `missing`    | `None`
+| `Int`        | `int`     |
+| `Bool`       | `bool`    |
 
 
 ## Troubleshooting
@@ -72,3 +87,4 @@
 1. 导入`tyjuliacall`时，报错 `ERROR: InitError: AssertionError: pystr_asstring(jl.__version__) == string(VERSION)`。
 
     解决：删除`$JULIA_DEPOT_PATH\packages\PythonCall`文件夹，并在Julia中重装PythonCall。
+
