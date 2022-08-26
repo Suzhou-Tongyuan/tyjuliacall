@@ -10,7 +10,6 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-juliacall = "^0.9.5"
 julia = "^0.5.7"
 wisepy2 = "^1.3"
 
