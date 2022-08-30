@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "tyjuliacall"
 version = "0.1.0"
-description = ""
-authors = ["thautwarm <twshere@outlook.com>"]
+description = "Tongyuan-hacked PyJulia+JuliaCall (PythonCall+PyCall) integration as an engineerization for Python-Julia interops."
+authors = ["Suzhou-Tongyuan <support@tongyuan.cc>"]
 packages = [
     { include = "tyjuliacall" },
     { include = "tyjuliasetup" }
