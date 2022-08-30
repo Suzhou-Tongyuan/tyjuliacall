@@ -25,7 +25,7 @@
     ```bash
     JULIA_CONDAPKG_BACKEND=Null
     PYTHON_JULIAPKG_OFFLINE=yes
-    JULIA_PYTHONCALL_EXE="@PyCall"
+    JULIA_PYTHONCALL_EXE=@PyCall
     ```
 
 2. 安装Python版本>=3.7，要求Python以动态链接方式编译。
