@@ -157,6 +157,15 @@ def _jl_using(fullnames: tuple[str, ...]):
         M = Main.getfield(M, Main.Symbol(submodulename))
     return M
 
+def use_sysimage(path: str | pathlib.Path):
+    """
+        This function only works before importing `tyjuliacall`.
+    """
+    if not isinstance(path, pathlib.Path):
+        path = pathlib.Path(path)
+    Environment.TYPY_JL_SYSIMAGE = path.absolute().as_posix()
+    Environment.TYPY_NOSETUP = "true"
+
 
 class _JuliaCodeEvaluatorClass:
     _eval_func: typing.Any
@@ -204,11 +213,8 @@ LegacyJuliaEvaluator = _JuliaCodeEvaluatorClass("pycall")
 
 EXTRA_OPTS = []
 
-
 def assure_setupenv():
     global BASE_IMAGE
-    if not importlib.util.find_spec("juliacall"):
-        raise ImportError("Python package 'juliacall' not found")
     if not importlib.util.find_spec("julia"):
         raise ImportError("Python package 'julia' not found")
     Environment.PYTHON_JULIAPKG_OFFLINE = "yes"
@@ -270,12 +276,14 @@ def setup():
             raise ValueError("Julia.exe failed")
         BASE_IMAGE = sysimage.strip().decode('utf-8')
 
-    print(BASE_IMAGE)
     Environment.PYTHON_JULIACALL_SYSIMAGE = BASE_IMAGE
     Julia(sysimage=BASE_IMAGE)
     from julia import Pkg  # type: ignore
+
+    # fix the juliacall bugs that initializing juliacall changes Julia dll path unexpectedly
+    LegacyJuliaEvaluator["import PythonCall;PythonCall.C.CTX.is_embedded = true"]
     from juliacall import Main  # type: ignore
-    
+
     Pkg.activate()  # workaround to prevent juliacall from creating it own project
 
 
