@@ -65,8 +65,15 @@
 
     2. 激活Python环境后，在Syslab/VSCode终端中使用`mk-ty-sysimage`命令。
 
-使用映像：Python用户设置`TYPY_JL_SYSIMAGE`为映像路径，且设置`TYPY_NOSETUP=true`, 并`import tyjuliacall`。
+2. 使用映像:
 
+    ```python
+    from tyjuliasetup import use_sysimage
+    use_sysimage("<映像路径>")
+
+    # 设置镜像后，导入tyjuliacall包
+    import tyjuliacall
+    ```
 
 ## 受信赖的Python-Julia数据类型转换
 

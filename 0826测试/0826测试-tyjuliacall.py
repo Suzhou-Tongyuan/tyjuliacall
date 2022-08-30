@@ -1,4 +1,6 @@
 import time
+
+
 def get_timespan():
     global _t0
     t1 = time.time()
@@ -23,7 +25,7 @@ print(f"TyJuliaCall 导入TySignalProcess, TyPlot和NumPy: {get_timespan():.2f} 
 fs = 100
 t = np.arange(fs + 1) / fs
 print(t)
-x = np.sin(2 * np.pi * t*3) + 0.25*np.sin(2 * np.pi * t*40)
+x = np.sin(2 * np.pi * t * 3) + 0.25 * np.sin(2 * np.pi * t * 40)
 print(x)
 
 

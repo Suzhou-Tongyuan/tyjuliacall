@@ -157,9 +157,10 @@ def _jl_using(fullnames: tuple[str, ...]):
         M = Main.getfield(M, Main.Symbol(submodulename))
     return M
 
+
 def use_sysimage(path: str | pathlib.Path):
     """
-        This function only works before importing `tyjuliacall`.
+    This function only works before importing `tyjuliacall`.
     """
     if not isinstance(path, pathlib.Path):
         path = pathlib.Path(path)
@@ -213,6 +214,7 @@ LegacyJuliaEvaluator = _JuliaCodeEvaluatorClass("pycall")
 
 EXTRA_OPTS = []
 
+
 def assure_setupenv():
     global BASE_IMAGE
     if not importlib.util.find_spec("julia"):
@@ -245,7 +247,7 @@ def check_or_build(jl_exe: str):
                 [
                     *EXTRA_OPTS,
                     "-e",
-                    r'import Pkg;Pkg.build();import PyCall;',
+                    r"import Pkg;Pkg.build();import PyCall;",
                 ],
                 supress_errors=False,
             )
@@ -254,6 +256,7 @@ def check_or_build(jl_exe: str):
             raise RuntimeError(
                 "julia or PyCall.jl is not installed or failed to build."
             )
+
 
 def setup():
     global BASE_IMAGE
@@ -268,13 +271,16 @@ def setup():
     Environment.JULIA_PYTHONCALL_EXE = "@PyCall"
     # sync PyCall and PythonCall
     from julia import Julia
+
     if Environment.TYPY_JL_SYSIMAGE:
         BASE_IMAGE = Environment.TYPY_JL_SYSIMAGE
     else:
-        sysimage = invoke_julia(jl_exe, ['-e', 'println(unsafe_string(Base.JLOptions().image_file))'])
+        sysimage = invoke_julia(
+            jl_exe, ["-e", "println(unsafe_string(Base.JLOptions().image_file))"]
+        )
         if not sysimage or not isinstance(sysimage, bytes) or not sysimage.strip():
             raise ValueError("Julia.exe failed")
-        BASE_IMAGE = sysimage.strip().decode('utf-8')
+        BASE_IMAGE = sysimage.strip().decode("utf-8")
 
     Environment.PYTHON_JULIACALL_SYSIMAGE = BASE_IMAGE
     Julia(sysimage=BASE_IMAGE)
@@ -290,11 +296,13 @@ def setup():
 def create_image(*juliapkgs: str, out: str = ""):
     assert all(isinstance(p, str) for p in juliapkgs), "pkgs must be a list of strings"
     out = out or Environment.TYJULIASETUP_SYSIMAGE_OUT
-    assert out and isinstance(out, str), "'--out=<output sysimage path>' is not correctly specified"
+    assert out and isinstance(
+        out, str
+    ), "'--out=<output sysimage path>' is not correctly specified"
     baseimage_path = BASE_IMAGE
     assert isinstance(baseimage_path, str), baseimage_path
     pkgs = list(juliapkgs)
-    pkgs.extend(filter(None, Environment.TYJULIASETUP_PKGS.split(';')))
+    pkgs.extend(filter(None, Environment.TYJULIASETUP_PKGS.split(";")))
 
     if "PyCall" not in pkgs:
         pkgs.append("PyCall")
