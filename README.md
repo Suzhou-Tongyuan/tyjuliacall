@@ -28,8 +28,9 @@
     JULIA_PYTHONCALL_EXE="@PyCall"
     ```
 
-2. 安装Python版本>=3.7，要求Python以动态链接方式编译，并预装如下包:
+2. 安装Python版本>=3.7，要求Python以动态链接方式编译。
 
+    如果要使用Syslab环境，请预装如下Python包:
     - matplotlib (TyPlot)
     - PyQt5 (TyPlot)
     - scipy (TySignalProcessing)
@@ -38,7 +39,7 @@
 
     ```bash
     cd <TyJuliaCall文件夹>
-    pip install .
+    pip install tyjuliacall
     ```
 
 4. 安装Julia版本>=1.6，并先后预装PyCall和PythonCall包。
@@ -79,7 +80,7 @@
 
 虽然tyjuliacall允许在Python和Julia之间传递任意数据，但由于是两门不同的语言，数据转换的类型对应关系是复杂的。
 
-为了保证代码的后向兼容性，使得规范的代码在不同版本的Syslab/tyjuliacall上都可以运行，最好只使用如下的数据类型转换。
+为了保证代码的后向兼容性，使得规范的代码在不同版本的Syslab/tyjuliacall上都可以运行，建议只使用如下的数据类型转换。
 
 ### Python数据传递到Julia
 
@@ -134,7 +135,7 @@ y = sp.medfilt1(x, 9)
 
 ### Julia数据传递到Python
 
-获取Julia函数的返回值，或导入Julia的非函数对象时，将发生Julia到Python的数据传递。
+当获取Julia函数返回值，或导入Julia模块的非函数对象时，将发生Julia到Python的数据传递。
 
 保证后向兼容的Julia到Python数据转换关系如下表所示：
 
