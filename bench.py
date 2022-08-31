@@ -18,4 +18,4 @@ y = sp.medfilt1(x, 9)
 
 
 %timeit Base.sum(x)
-%timeit Base.sum(collect(x))
+%timeit Base.sum(Base.collect(x))

@@ -129,7 +129,7 @@ y = sp.medfilt1(x, 9)
 # 使用collect拷贝传参更慢的例子：
 %timeit Base.sum(x)
 # 15.4 µs ± 305 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)
-%timeit Base.sum(collect(x))
+%timeit Base.sum(Base.collect(x))
 # 44.7 µs ± 29.5 µs per loop (mean ± std. dev. of 7 runs, 10,000 loops each)
 ```
 
