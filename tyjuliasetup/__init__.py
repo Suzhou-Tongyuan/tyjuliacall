@@ -1,5 +1,6 @@
 from __future__ import annotations
 import contextlib
+import ctypes
 import shutil
 import subprocess
 import io
@@ -8,7 +9,8 @@ import os
 import sys
 import pathlib
 import typing
-import importlib.util
+import jnumpy
+import shlex
 from types import ModuleType
 
 PYTHONPATH = pathlib.Path(sys.executable).resolve().as_posix()
@@ -62,35 +64,28 @@ def env_descriptor(varname):
             env = os.environ
         else:
             env = self._env
-        env[varname] = value
+        if not value:
+            if varname in env:
+                del env[varname]
+        else:
+            env[varname] = value
 
     return set
 
 
 class ENV:
-    PYTHON_JULIAPKG_OFFLINE: str
-    PYTHON_JULIAPKG_PROJECT: str
-    PYTHON_JULIAPKG_EXE: str
-
-    JULIA_PYTHONCALL_PROJECT: str
-    JULIA_PYTHONCALL_LIBPTR: str
-    JULIA_PYTHONCALL_EXE: str
-    JULIA_CONDAPKG_BACKEND: str
-
-    PYTHON_JULIACALL_SYSIMAGE: str
-    PYTHON_JULIACALL_OPTIMIZE: str
-    PYTHON_JULIACALL_COMPILE: str
-    JULIA_DEPOT_PATH: str
     PYTHON: str
-
+    PYCALL_INPROC_LIBPYPTR: str
+    PYCALL_INPROC_PROCID: str
     TYPY_JL_SYSIMAGE: str
-    TYPY_NOSETUP: str
-
-    TYJULIASETUP_PKGS: str
-    TYJULIASETUP_SYSIMAGE_OUT: str
-
+    TYPY_JL_OPTS: str
     PATH: str
     HOME: str
+
+    JULIA_PYTHONCALL_EXE: str
+    JULIA_CONDAPKG_BACKEND: str
+    PYTHON_JULIAPKG_OFFLINE: str
+    PYTHON_JULIACALL_SYSIMAGE: str
 
     def __init__(self, env=None):
         self._env = env
@@ -108,10 +103,15 @@ Environment = ENV()
 
 
 class JuliaModule(ModuleType):
+    _jlapi: typing.Any
+
     def __new__(cls, loader, name, jl_mod):
+        import _tyjuliacall  # type: ignore
+
         if isinstance(jl_mod, ModuleType):
             return jl_mod
         o = ModuleType.__new__(cls)
+        object.__setattr__(o, "_jlapi", _tyjuliacall)
         o.__init__(loader, name, jl_mod)
         return o
 
@@ -119,9 +119,14 @@ class JuliaModule(ModuleType):
         self.__it = jl_mod
         self.__loader__ = loader
         self.__name__ = name
+        self.__package__ = name
+        self.__spec__ = None
 
     def __getattr__(self, name):
-        return getattr(self.__it, name)
+        return self._jlapi.py_getproperty(self.__it, name)
+
+    def __dir__(self):
+        return self._jlapi.py_module_names(self.__it)
 
     __path__ = []
 
@@ -150,9 +155,9 @@ class JuliaLoader:
 
 
 def _jl_using(fullnames: tuple[str, ...]):
-    from juliacall import Main  # type: ignore
+    from _tyjuliacall import evaluate, Main  # type: ignore
 
-    M = Main.seval("import {0};{0}".format(fullnames[0]))
+    M = evaluate("import {0};{0}".format(fullnames[0]))
     for submodulename in fullnames[1:]:
         M = Main.getfield(M, Main.Symbol(submodulename))
     return M
@@ -165,36 +170,23 @@ def use_sysimage(path: str | pathlib.Path):
     if not isinstance(path, pathlib.Path):
         path = pathlib.Path(path)
     Environment.TYPY_JL_SYSIMAGE = path.absolute().as_posix()
-    Environment.TYPY_NOSETUP = "true"
 
 
 class _JuliaCodeEvaluatorClass:
     _eval_func: typing.Any
 
-    def __init__(self, engine: typing.Literal["pycall", "pythoncall"]):
-        self._pycall_eval = None
-        self._pythoncall_eval = None
-        self.engine = engine
-
-    def assure_pycall(self):
-        if self._pycall_eval is None:
-            from julia import Main  # type: ignore
-
-            self._pycall_eval = Main.eval
-        return self._pycall_eval
+    def __init__(self):
+        self._eval_func = None
 
     def assure_pythoncall(self):
-        if self._pythoncall_eval is None:
-            from juliacall import Main  # type: ignore
+        if self._eval_func is None:
+            from _tyjuliacall import evaluate  # type: ignore
 
-            self._pythoncall_eval = Main.seval
-        return self._pythoncall_eval
+            self._eval_func = evaluate
+        return self._eval_func
 
     def __getitem__(self, arg):
-        if self.engine == "pycall":
-            eval_func = self.assure_pycall()
-        else:
-            eval_func = self.assure_pythoncall()
+        eval_func = self.assure_pythoncall()
         o = None
         if isinstance(arg, tuple):
             for code in arg:
@@ -209,69 +201,16 @@ class _JuliaCodeEvaluatorClass:
         return o
 
 
-JuliaEvaluator = _JuliaCodeEvaluatorClass("pythoncall")
-LegacyJuliaEvaluator = _JuliaCodeEvaluatorClass("pycall")
-
-EXTRA_OPTS = []
-
-
-def assure_setupenv():
-    global BASE_IMAGE
-    if not importlib.util.find_spec("julia"):
-        raise ImportError("Python package 'julia' not found")
-    Environment.PYTHON_JULIAPKG_OFFLINE = "yes"
-    Environment.JULIA_CONDAPKG_BACKEND = "Null"
-    Environment.JULIA_PYTHONCALL_EXE = PYTHONPATH
-    Environment.add_path(os.path.dirname(PYTHONPATH))
-    Environment.PYTHON = PYTHONPATH
-    if Environment.TYPY_JL_SYSIMAGE:
-        Environment.PYTHON_JULIACALL_SYSIMAGE = Environment.TYPY_JL_SYSIMAGE
-        EXTRA_OPTS.extend(["--sysimage", Environment.TYPY_JL_SYSIMAGE])
-        BASE_IMAGE = Environment.TYPY_JL_SYSIMAGE
-
-
-def check_or_build(jl_exe: str):
-    """This is only called exactly after `assure_setupenv()`."""
-    result = invoke_julia(
-        jl_exe, [*EXTRA_OPTS, "-e", "import PyCall;println(PyCall.python)"]
-    )
-    if isinstance(result, bytes):
-        result = result.decode("utf-8")
-    if (
-        not isinstance(result, str)
-        or pathlib.Path(result.strip()).resolve().as_posix() != PYTHONPATH
-    ):
-        if (
-            invoke_julia(
-                jl_exe,
-                [
-                    *EXTRA_OPTS,
-                    "-e",
-                    r"import Pkg;Pkg.build();import PyCall;",
-                ],
-                supress_errors=False,
-            )
-            is None
-        ):
-            raise RuntimeError(
-                "julia or PyCall.jl is not installed or failed to build."
-            )
+JuliaEvaluator = _JuliaCodeEvaluatorClass()
 
 
 def setup():
     global BASE_IMAGE
-    assure_setupenv()
     jl_exe = shutil.which("julia")
     if not jl_exe:
         raise RuntimeError("Julia not found")
-    if Environment.TYPY_NOSETUP:
-        pass
-    else:
-        check_or_build(jl_exe)
-    Environment.JULIA_PYTHONCALL_EXE = "@PyCall"
-    # sync PyCall and PythonCall
-    from julia import Julia
 
+    # sync PyCall and PythonCall
     if Environment.TYPY_JL_SYSIMAGE:
         BASE_IMAGE = Environment.TYPY_JL_SYSIMAGE
     else:
@@ -282,39 +221,22 @@ def setup():
             raise ValueError("Julia.exe failed")
         BASE_IMAGE = sysimage.strip().decode("utf-8")
 
+    Environment.PYTHON = PYTHONPATH
+    Environment.PYCALL_INPROC_LIBPYPTR = hex(ctypes.pythonapi._handle)
+    Environment.PYCALL_INPROC_PROCID = str(os.getpid())
+    Environment.TYPY_JL_OPTS = shlex.join(["--sysimage", BASE_IMAGE])
+    Environment.add_path(os.path.dirname(PYTHONPATH))
+
+    # in case that users work with PythonCall
+    Environment.JULIA_CONDAPKG_BACKEND = "Null"
+    Environment.PYTHON_JULIAPKG_OFFLINE = "yes"
+    Environment.JULIA_PYTHONCALL_EXE = "@PyCall"
     Environment.PYTHON_JULIACALL_SYSIMAGE = BASE_IMAGE
-    Julia(sysimage=BASE_IMAGE)
-    from julia import Pkg  # type: ignore
 
-    # fix the juliacall bugs that initializing juliacall changes Julia dll path unexpectedly
-    LegacyJuliaEvaluator["import PythonCall;PythonCall.C.CTX.is_embedded = true"]
-    from juliacall import Main  # type: ignore
+    jnumpy.init_jl()
+    jnumpy.init_project(__file__)
+    jnumpy.exec_julia("Pkg.activate(io=devnull)")
+    jnumpy.exec_julia("import PyCall")
+    from _tyjuliacall import setup_pycall  # type: ignore
 
-    Pkg.activate()  # workaround to prevent juliacall from creating it own project
-
-
-def create_image(*juliapkgs: str, out: str = ""):
-    assert all(isinstance(p, str) for p in juliapkgs), "pkgs must be a list of strings"
-    out = out or Environment.TYJULIASETUP_SYSIMAGE_OUT
-    assert out and isinstance(
-        out, str
-    ), "'--out=<output sysimage path>' is not correctly specified"
-    baseimage_path = BASE_IMAGE
-    assert isinstance(baseimage_path, str), baseimage_path
-    pkgs = list(juliapkgs)
-    pkgs.extend(filter(None, Environment.TYJULIASETUP_PKGS.split(";")))
-
-    if "PyCall" not in pkgs:
-        pkgs.append("PyCall")
-    if "PythonCall" not in pkgs:
-        pkgs.append("PythonCall")
-    sysimage_path = os.path.abspath(out)
-    LegacyJuliaEvaluator[
-        "import PackageCompiler",
-        rf"""PackageCompiler.create_sysimage(
-            Symbol.({json.dumps(pkgs)}),
-            sysimage_path = {escape_to_julia_rawstr(sysimage_path)},
-            cpu_target = PackageCompiler.default_app_cpu_target();
-            base_sysimage = {escape_to_julia_rawstr(baseimage_path)}
-        )""",
-    ]
+    setup_pycall()
