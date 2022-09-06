@@ -82,6 +82,7 @@ class ENV:
     PATH: str
     HOME: str
 
+    JULIA_PYTHONCALL_LIBPTR: str
     JULIA_PYTHONCALL_EXE: str
     JULIA_CONDAPKG_BACKEND: str
     PYTHON_JULIAPKG_OFFLINE: str
@@ -236,7 +237,6 @@ def setup():
     jnumpy.init_jl()
     jnumpy.init_project(__file__)
     jnumpy.exec_julia("Pkg.activate(io=devnull)")
-    jnumpy.exec_julia("import PyCall")
-    from _tyjuliacall import setup_pycall  # type: ignore
-
-    setup_pycall()
+    from _tyjuliacall_jnumpy import setup_jv  # type: ignore
+    from tyjuliasetup.jv import JV
+    setup_jv(JV)
