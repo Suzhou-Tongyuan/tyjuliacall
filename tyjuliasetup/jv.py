@@ -35,13 +35,12 @@ __jl_hash__: typing.Callable[[JV], typing.Any]
 __jl_repr__: typing.Callable[[JV], str]
 _jl_repr_pretty_: typing.Callable[[JV], str]
 
+
 class JV:
-    __slots__ = ['__jlslot__']
+    __slots__ = ["__jlslot__"]
 
     def __call__(self, *args, **kwargs):
-        return __jl_invoke__(
-            self, args, kwargs
-        )
+        return __jl_invoke__(self, args, kwargs)
 
     def __getattr__(self, name: str):
         return __jl_getattr__(self, name)
@@ -137,14 +136,15 @@ class JV:
         return __jl_repr__(self)
 
     def _repr_pretty_(self, p, cycle):
-        p.text(_jl_repr_pretty_(self) if not cycle else '...')
+        p.text(_jl_repr_pretty_(self) if not cycle else "...")
 
     def __iter__(self):
         global _jl_iterate
         try:
-            jl_iterate = _jl_iterate # type: ignore
+            jl_iterate = _jl_iterate  # type: ignore
         except NameError:
-            from _tyjuliacall_jnumpy import Base # type: ignore
+            from _tyjuliacall_jnumpy import Base  # type: ignore
+
             jl_iterate = _jl_iterate = Base.iterate
 
         pair = jl_iterate(self)
