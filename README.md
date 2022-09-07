@@ -1,5 +1,12 @@
 # TyJuliaCall
 
+[![CI](https://github.com/Suzhou-Tongyuan/tyjuliacall/actions/workflows/ci.yml/badge.svg)](https://github.com/Suzhou-Tongyuan/tyjuliacall/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Suzhou-Tongyuan/tyjuliacall/branch/master/graph/badge.svg?token=NMRDY32QIC)](https://codecov.io/gh/Suzhou-Tongyuan/tyjuliacall)
+[![versions](https://img.shields.io/pypi/pyversions/tyjuliacall.svg)](https://pypi.org/project/tyjuliacall/#history)
+[![pypi](https://img.shields.io/pypi/v/tyjuliacall.svg)](https://pypi.org/project/tyjuliacall/)
+[![License](https://img.shields.io/badge/License-BSD_2--Clause-green.svg)](https://github.com/Suzhou-Tongyuan/tyjuliacall/blob/main/LICENSE)
+
+
 Calling Julia from Python for the real world.
 
 Features:
