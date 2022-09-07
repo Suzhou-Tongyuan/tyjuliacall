@@ -52,16 +52,17 @@ Python向Julia函数传参时，推荐只使用下表左边的数据类型，以
 
 |  Python Type | Julia Type  |
 |:-----:|:----:|
-| `int` | 尽可能`Int64`，否则`BigInt`|
+| 基本类型 | |
+| `int` | `Int64`|
 | `float` | `Float64` |
 | `bool` | `Bool` |
 | `complex` | `ComplexF64` |
 | `None`  | `nothing` |
 | `str`   | `String` |
-| `bytes`     | `String` |
-| `bytearray`     | `Vector{UInt8}` |
+| 组合类型 |   |
+| `numpy.ndarray` (dtype为数字或字符串或bool)  | 原生`Array` |
 | `tuple`，且元素均为表中数据类型 | `Tuple` |
-| `numpy.ndarray` (元素为数值) | 原生`Array` |
+
 
 
 对于Python传递给Julia的`tuple`，其各个元素按照以上规则依次转换。
@@ -72,14 +73,26 @@ Python向Julia函数传参时，推荐只使用下表左边的数据类型，以
 
 保证后向兼容的Julia到Python数据转换关系如下表所示：
 
-|  Julia Type | Python  |
+|  Julia | Python  |
 |:-----:|:----:|
-| 有符号数和无符号数 | `int`|
-| `Float64` | `float` |
+| 基本类型 |  |
+| `Integer`子类型  | `int`|
+| `AbstractFloat`子类型 | `float`|
 | `Bool` | `bool` |
-|  `ComplexF16, ComplexF32, ComplexF64` | `complex` |
-| `nothing` | `None`  |
-| `AbstractString` | `str`   |
+| `Complex`子类型 | `complex` |
+| `nothing`对象 | `None`  |
+| `AbstractString`子类型 | `str`   |
 | `Vector{UInt8}` | `bytearray` |
-| `Array` (T为数值类型) | `numpy.ndarray` |
-| `Tuple` | `tuple` |
+| 组合类型 | |
+| `AbstrctArray{T}` (T见下方说明) | `numpy.ndarray` |
+| `Tuple{T1, ..., Tn}`, 且`Ti`为该表中的类型 | `tuple` |
+| 其余Julia类型            | `tyjuliacall.JV` |
+
+一个Julia AbstrctArray能转换为numpy数组，当且仅当其元素类型`T`是以下类型之一
+
+- `Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64`
+- `Float16, Float32, Float64`
+- `ComplexF16, ComplexF32, ComplexF64`
+- `Bool`
+
+注意，当类型为`Vector{String}`或者`Array{String, 2}`的Julia对象被返回给Python时，它被封装为一个`tyjuliacall.JV`类型。
