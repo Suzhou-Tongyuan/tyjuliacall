@@ -4,30 +4,19 @@ Calling Julia from Python for the real world.
 
 Features:
 
-1. Working with Suzhou-Tongyuan hacked PyCall: https://github.com/Suzhou-Tongyuan/PyCall.jl.
+1. **Cross-platform support for both dynamically linked Python and statically linked Python.**
 
-2. **Cross-platform support for both dynamically linked Python and statically linked Python.**
-
-3. **Support Julia system images.**
-
-4. Compatible to the PyCall ecosystem.
-
+2. **Support Julia system images.**
 
 ## Installation
 
 Prerequisites: Python (>=3.7)
 
-1. Install Tongyuan-hacked PyCall:
+Then install the `tyjuliacall` Python package.
 
-    ```bash
-    Pkg.add(url="https://github.com/Suzhou-Tongyuan/PyCall.jl")
-    ```
-
-2. Install the `tyjuliacall` Python package.
-
-    ```bash
-    pip install -U tyjuliacall
-    ```
+```bash
+pip install -U tyjuliacall
+```
 
 ## Using System Images
 
