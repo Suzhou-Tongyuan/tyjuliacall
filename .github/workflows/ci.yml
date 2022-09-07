@@ -40,5 +40,5 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         files: coverage.xml
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
