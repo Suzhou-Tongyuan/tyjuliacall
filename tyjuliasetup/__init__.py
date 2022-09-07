@@ -43,14 +43,6 @@ def invoke_julia(jl_exepath: str, args: list[str], *, supress_errors: bool = Tru
         return None
 
 
-def escape_string(s: str):
-    return json.dumps(s, ensure_ascii=False)
-
-
-def escape_to_julia_rawstr(s: str):
-    return "raw" + escape_string(s)
-
-
 def env_descriptor(varname):
     @property
     def get(self):
@@ -111,8 +103,6 @@ class JuliaModule(ModuleType):
     def __new__(cls, loader, name, jl_mod):
         import _tyjuliacall_jnumpy  # type: ignore
 
-        if isinstance(jl_mod, ModuleType):
-            return jl_mod
         o = ModuleType.__new__(cls)
         object.__setattr__(o, "_jlapi", _tyjuliacall_jnumpy)
         o.__init__(loader, name, jl_mod)
