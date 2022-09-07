@@ -211,7 +211,7 @@ function reasonable_box(x::Any)::Py
     end
 
     if x isa Complex
-        return py_cast(Py, convert(Complex64, x))
+        return py_cast(Py, convert(ComplexF64, x))
     end
 
     if x isa AbstractString
@@ -290,6 +290,8 @@ end
 end
 
 @export_py function jl_setitem(self::Py, item::Py, val::Py)::Py
+    # Python multi-indexing is translated to indexing using a tuple.
+    # So we do multi-indexing if `item` is a tuple.
     if is_type_exact(item, MyPyAPI.tuple)
         setindex!(
             unbox_julia(self),
@@ -392,13 +394,14 @@ end
     # TODO: fast path
     o = unbox_julia(self)
     if o isa Number
-        return o == 0
+        return o != 0
     end
-    if (o isa AbstractArray || o isa AbstractDict || o isa AbstractSet
-        || o isa AbstractString || o isa AbstractPattern)
-        return isempty(o)
+    if (o isa AbstractArray || o isa AbstractDict ||
+        o isa AbstractSet || o isa AbstractString)
+        return !isempty(o)
     end
-    return false
+    # return `true` is the default semantics of a Python object
+    return true
 end
 
 @export_py function jl_pos(self::Py)::Py
@@ -413,8 +416,8 @@ end
     reasonable_box(abs(unbox_julia(self)))
 end
 
-@export_py function jl_hash(self::Py)::UInt64
-    reasonable_box(hash(unbox_julia(self)))
+@export_py function jl_hash(self::Py)::Int64
+    hash(unbox_julia(self)) % Int64
 end
 
 @export_py function jl_repr(self::Py)::String

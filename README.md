@@ -34,10 +34,11 @@ Prerequisites: Python (>=3.7)
 ```python
 from tyjuliasetup import use_sysimage  # CAUTIOUS: not 'tyjuliacall'!
 use_sysimage(r"/path/to/sysimg")
-from tyjuliacall import JuliaEvaluator
+from tyjuliacall import Base
 print(
     "current sysimage in use",
-    JuliaEvaluator["Base.unsafe_string(Base.JLOptions().image_file)"])
+    Base.unsafe_string(Base.JLOptions().image_file))
+# out: /path/to/sysimg
 ```
 
 ## 受信赖的Python-Julia数据类型转换
@@ -63,9 +64,18 @@ Python向Julia函数传参时，推荐只使用下表左边的数据类型，以
 | `numpy.ndarray` (dtype为数字或字符串或bool)  | 原生`Array` |
 | `tuple`，且元素均为表中数据类型 | `Tuple` |
 
-
-
 对于Python传递给Julia的`tuple`，其各个元素按照以上规则依次转换。
+
+TIPS: 如何传递`bytearray`或者`bytes`到Julia?
+
+1. 向Julia函数传递bytes时，可以改为传递一个uint8的数组。
+
+   无拷贝传参： `np.array(memoryview(b'mybytes'), dtype=np.uint8)`
+   拷贝传参： `np.array(list(b'mybytes'), dtype=np.uint8)`
+
+2. 向Julia函数传递bytearray时，可以改为传递一个uint8的数组。
+
+    无拷贝传参： `np.asarray(bytearrat(b'mybytes')))`
 
 ### Julia数据传递到Python
 
