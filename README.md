@@ -95,3 +95,8 @@ TIPS: 如何传递`bytearray`或者`bytes`到Julia?
 - `Bool`
 
 注意，当类型为`Vector{String}`或者`Array{String, 2}`的Julia对象被返回给Python时，它被封装为一个`tyjuliacall.JV`类型。
+
+## 其他说明
+
+1. 不要对Julia包/模块使用`from ... import *`。
+2. `Vector{String}`传到Python是一个`tyjuliacall.JV`，这是一个纯Julia对象的包装，因此下标索引是从1开始的。
