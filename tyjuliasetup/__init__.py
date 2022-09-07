@@ -107,12 +107,12 @@ class JuliaModule(ModuleType):
     _jlapi: typing.Any
 
     def __new__(cls, loader, name, jl_mod):
-        import _tyjuliacall  # type: ignore
+        import _tyjuliacall_jnumpy  # type: ignore
 
         if isinstance(jl_mod, ModuleType):
             return jl_mod
         o = ModuleType.__new__(cls)
-        object.__setattr__(o, "_jlapi", _tyjuliacall)
+        object.__setattr__(o, "_jlapi", _tyjuliacall_jnumpy)
         o.__init__(loader, name, jl_mod)
         return o
 
@@ -124,10 +124,10 @@ class JuliaModule(ModuleType):
         self.__spec__ = None
 
     def __getattr__(self, name):
-        return self._jlapi.py_getproperty(self.__it, name)
+        return getattr(self.__it, name)
 
     def __dir__(self):
-        return self._jlapi.py_module_names(self.__it)
+        return list(self._jlapi.Main.names(self.__it, all=True, imported=True))
 
     __path__ = []
 
@@ -156,7 +156,7 @@ class JuliaLoader:
 
 
 def _jl_using(fullnames: tuple[str, ...]):
-    from _tyjuliacall import evaluate, Main  # type: ignore
+    from _tyjuliacall_jnumpy import evaluate, Main  # type: ignore
 
     M = evaluate("import {0};{0}".format(fullnames[0]))
     for submodulename in fullnames[1:]:
@@ -181,12 +181,12 @@ class _JuliaCodeEvaluatorClass:
 
     def assure_pythoncall(self):
         if self._eval_func is None:
-            from _tyjuliacall import evaluate  # type: ignore
+            from _tyjuliacall_jnumpy import evaluate  # type: ignore
 
             self._eval_func = evaluate
         return self._eval_func
 
-    def __getitem__(self, arg):
+    def __getitem__(self, arg) -> typing.Any:
         eval_func = self.assure_pythoncall()
         o = None
         if isinstance(arg, tuple):
@@ -237,6 +237,8 @@ def setup():
     jnumpy.init_jl()
     jnumpy.init_project(__file__)
     jnumpy.exec_julia("Pkg.activate(io=devnull)")
-    from _tyjuliacall_jnumpy import setup_jv  # type: ignore
-    from tyjuliasetup.jv import JV
-    setup_jv(JV)
+    import _tyjuliacall_jnumpy # type: ignore
+    from tyjuliasetup import jv
+
+    _tyjuliacall_jnumpy.setup_jv(jv.JV, jv)
+    _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)

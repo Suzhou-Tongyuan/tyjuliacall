@@ -19,8 +19,10 @@ mutable struct RequiredFromPythonAPIStruct
     class::Py  # the 'type' object in Python
     next::Py
     none::Py
+    iter::Py
     # buultin datatypes
     dict::Py
+    object::Py
 
     tuple::Py
     int::Py
@@ -35,11 +37,16 @@ end
 const MyPyAPI = RequiredFromPythonAPIStruct()
 
 function classof(x::Py)::Py
-    classof(x)
+    Py(
+        CPython.BorrowReference(),
+        reinterpret(
+            C.Ptr{CPython.PyObject},
+            CPython.unsafe_unwrap(x).type[])
+    )
 end
 
-function is_type_exact(x::Py, t::Py)::Py
-    return CPython.py_equal_identity(classof(x), t)
+function is_type_exact(x::Py, t::Py)::Bool
+    reinterpret(UInt, CPython.unsafe_unwrap(x).type[]) === reinterpret(UInt, CPython.unsafe_unwrap(t))
 end
 
 struct JuliaAsPython
@@ -80,7 +87,11 @@ function box_julia(val::Any)
         @cfunction(PyCapsule_Destruct_JuliaAsPython, Cvoid, (Ptr{CPython.PyObject}, ))))
 
     jv = MyPyAPI.JV()
-    jv.__jlslot__ = capsule
+    MyPyAPI.object.__setattr__(
+        jv,
+        CPython.attribute_symbol_to_pyobject(:__jlslot__),
+        capsule
+    )
     return jv
 end
 
@@ -98,43 +109,70 @@ function reasonable_unbox(py::Py)
     if CPython.py_equal_identity(py, MyPyAPI.none)
         return nothing
     end
-    if CPython.py_equal_identity(py, MyPyAPI.JV)
+    if is_type_exact(py, MyPyAPI.JV)
         return unbox_julia(py)
     end
-
-    t = classof(py)
-    if CPython.py_equal_identity(t, MyPyAPI.int)
+    if is_type_exact(py, MyPyAPI.int)
         return py_cast(Int, py)
     end
-    if CPython.py_equal_identity(t, MyPyAPI.float)
+    if is_type_exact(py, MyPyAPI.float)
         return py_cast(Float64, py)
     end
-    if CPython.py_equal_identity(t, MyPyAPI.str)
+    if is_type_exact(py, MyPyAPI.str)
         return py_cast(String, py)
     end
-    if CPython.py_equal_identity(t, MyPyAPI.bool)
+    if is_type_exact(py, MyPyAPI.bool)
         return py_cast(Bool, py)
     end
-    if CPython.py_equal_identity(t, MyPyAPI.complex)
-        return py_cast(Complex, py)
+    if is_type_exact(py, MyPyAPI.complex)
+        return py_cast(ComplexF64, py)
     end
-    if CPython.py_equal_identity(t, MyPyAPI.ndarray)
-        return CPython.from_ndarray(py)
+    if is_type_exact(py, MyPyAPI.ndarray)
+        try
+            return CPython.from_ndarray(py)
+        catch
+            typename = py_cast(String, py.dtype.name)
+            if startswith(typename, "str")
+                let data = String[]
+                    flat_pyarray = py.flatten()
+                    shape = reasonable_unbox(py.shape)
+                    for i = 0:length(flat_pyarray)-1
+                        elem = flat_pyarray[py_cast(Py, i)]
+                        push!(data, py_cast(String, elem))
+                    end
+                    return reshape(data, shape)
+                end
+            elseif typename == "bool"
+                let
+                    np = CPython.get_numpy()
+                    # TODO: use reinterpreted array?
+                    return reinterpret(Bool, CPython.from_ndarray(py.astype(np.uint8)))
+                end
+            else
+                return box_julia(py)
+            end
+        end
     end
-    if CPython.py_equal_identity(t, MyPyAPI.tuple)
-        n = length(t)
-        return Tuple(reasonable_unbox(t[i-1]) for i in 1:n)
+    if is_type_exact(py, MyPyAPI.tuple)
+        n = length(py)
+        return Tuple(reasonable_unbox(py[py_cast(Py, i-1)]) for i in 1:n)
     end
-    return py
+    error("unbox failed: cannot convert a Python object (type: $(classof(py))) to julia value.")
 end
 
+const JNumPySupportedNumPyArrayBoxingElementTypes = Union{
+    Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64,
+    Float16, Float32, Float64,
+    ComplexF16, ComplexF32, ComplexF64
+}
 
 function reasonable_box(x::Any)::Py
     # fast path
     if x === nothing
         return MyPyAPI.none
     end
-    if x isa Core.BuiltinInts
+
+    if x isa Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64}
         return py_cast(Py, x)
     end
     if x isa Union{Float16, Float32, Float64}
@@ -153,30 +191,38 @@ function reasonable_box(x::Any)::Py
     # semantics
 
     if x isa AbstractArray
-        return py_cast(AbstractArray, x)
+        elt = eltype(typeof(x))
+        if elt === Bool
+            np = CPython.get_numpy()
+            return py_cast(Py, reinterpret(UInt8, x)).astype(np.bool_)
+        elseif elt <: JNumPySupportedNumPyArrayBoxingElementTypes
+            return py_cast(Py, x)
+        else
+            return box_julia(x)
+        end
     end
 
     if x isa Integer
-        return py_cast(Py, x)
+        return py_cast(Py, convert(Int, x))
     end
 
     if x isa AbstractFloat
-        return py_cast(Py, x)
+        return py_cast(Py, convert(Float64, x))
     end
 
     if x isa Complex
-        return py_cast(Py, x)
+        return py_cast(Py, convert(Complex64, x))
     end
 
     if x isa AbstractString
-        return py_cast(Py, x)
+        return py_cast(Py, convert(String, x))
     end
 
     if x isa Tuple
         N = length(x)
         argtuple = PyAPI.PyTuple_New(N)
         for i = 1:N
-            arg = reasonable_box(args[i])
+            arg = reasonable_box(x[i])
             PyAPI.Py_IncRef(arg)
             PyAPI.PyTuple_SetItem(argtuple, i-1, arg)
         end
@@ -191,19 +237,21 @@ end
         error("The first argument must be a Julia object.")
     end
 
-    if is_type_exact(args, MyPyAPI.tuple)
-        error("JV.__call__: args must be a tuple.")
+    if !is_type_exact(args, MyPyAPI.tuple)
+        error("JV.__call__: args must be a tuple, got ($(classof(args))).")
     end
 
-    if is_type_exact(kwargs, MyPyAPI.dict)
+    if !is_type_exact(kwargs, MyPyAPI.dict)
         error("JV.__call__: kwargs must be a dict.")
     end
 
     nargs = length(args)
-    nkwargs = length(args)
+    nkwargs = length(kwargs)
     jlargs = Any[]
     for i = 0:nargs-1
-        push!(jlargs, reasonable_unbox(args[i]))
+        arg = args[py_cast(Py, i)]
+        jlarg = reasonable_unbox(arg)
+        push!(jlargs, jlarg)
     end
 
     jlkwargs = Pair{Symbol, Any}[]
@@ -371,56 +419,78 @@ end
 
 @export_py function jl_repr(self::Py)::String
     address = reinterpret(UInt, CPython.unsafe_unwrap(self))
-    "<JV(" * repr(unbox_julia(self)) * ") at $(address)>"
+    "<JV(" * repr(unbox_julia(self)) * ") at $(repr(address))>"
 end
 
 @export_py function jl_display(self::Py)::String
-    display(unbox_julia(self))
+    old_stdout = stdout
+    rd, wr = redirect_stdout()
+    try
+        show(wr, "text/plain", unbox_julia(self))
+    finally
+        try
+            close(wr)
+        catch
+        end
+        redirect_stdout(old_stdout)
+    end
+    read(rd, String)
 end
 
-@export_py function setup_jv(jvt::Py)::Nothing
-    jvt.__invoke__ = Pyfunc(jl_call)
-    jvt.__getattr__ = Pyfunc(jl_getattr)
-    jvt.__setattr__ = Pyfunc(jl_setattr)
-    jvt.__getitem__ = Pyfunc(jl_getitem)
-    jvt.__setitem__ = Pyfunc(jl_setitem)
-    jvt.__add__ = Pyfunc(jl_add)
-    jvt.__sub__ = Pyfunc(jl_sub)
-    jvt.__mul__ = Pyfunc(jl_mul)
-    jvt.__matmul__ = Pyfunc(jl_matmul)
-    jvt.__truediv__ = Pyfunc(jl_truediv)
-    jvt.__floordiv__ = Pyfunc(jl_floordiv)
-    jvt.__mod__ = Pyfunc(jl_mod)
-    jvt.__pow__ = Pyfunc(jl_pow)
-    jvt.__lshift__ = Pyfunc(jl_lshift)
-    jvt.__rshift__ = Pyfunc(jl_rshift)
-    jvt.__bitor__ = Pyfunc(jl_bitor)
-    jvt.__bitxor__ = Pyfunc(jl_bitxor)
-    jvt.__bitand__ = Pyfunc(jl_bitand)
-    jvt.__eq__ = Pyfunc(jl_eq)
-    jvt.__ne__ = Pyfunc(jl_ne)
-    jvt.__lt__ = Pyfunc(jl_lt)
-    jvt.__le__ = Pyfunc(jl_le)
-    jvt.__gt__ = Pyfunc(jl_gt)
-    jvt.__ge__ = Pyfunc(jl_ge)
-    jvt.__contains__ = Pyfunc(jl_contains)
-    jvt.__invert__ = Pyfunc(jl_invert)
-    jvt.__bool__ = Pyfunc(jl_bool)
-    jvt.__pos__ = Pyfunc(jl_pos)
-    jvt.__neg__ = Pyfunc(jl_neg)
-    jvt.__abs__ = Pyfunc(jl_abs)
-    jvt.__hash__ = Pyfunc(jl_hash)
-    jvt.__repr__ = Pyfunc(jl_repr)
-    jvt._repr_pretty_ = Pyfunc(jl_display)
+@export_py function setup_jv(jvt::Py, jv_module::Py)::Nothing
+    MyPyAPI.JV = jvt
+    jv_module.__jl_invoke__ = Pyfunc(jl_call)
+    jv_module.__jl_getattr__ = Pyfunc(jl_getattr)
+    jv_module.__jl_setattr__ = Pyfunc(jl_setattr)
+    jv_module.__jl_getitem__ = Pyfunc(jl_getitem)
+    jv_module.__jl_setitem__ = Pyfunc(jl_setitem)
+    jv_module.__jl_add__ = Pyfunc(jl_add)
+    jv_module.__jl_sub__ = Pyfunc(jl_sub)
+    jv_module.__jl_mul__ = Pyfunc(jl_mul)
+    jv_module.__jl_matmul__ = Pyfunc(jl_matmul)
+    jv_module.__jl_truediv__ = Pyfunc(jl_truediv)
+    jv_module.__jl_floordiv__ = Pyfunc(jl_floordiv)
+    jv_module.__jl_mod__ = Pyfunc(jl_mod)
+    jv_module.__jl_pow__ = Pyfunc(jl_pow)
+    jv_module.__jl_lshift__ = Pyfunc(jl_lshift)
+    jv_module.__jl_rshift__ = Pyfunc(jl_rshift)
+    jv_module.__jl_bitor__ = Pyfunc(jl_bitor)
+    jv_module.__jl_bitxor__ = Pyfunc(jl_bitxor)
+    jv_module.__jl_bitand__ = Pyfunc(jl_bitand)
+    jv_module.__jl_eq__ = Pyfunc(jl_eq)
+    jv_module.__jl_ne__ = Pyfunc(jl_ne)
+    jv_module.__jl_lt__ = Pyfunc(jl_lt)
+    jv_module.__jl_le__ = Pyfunc(jl_le)
+    jv_module.__jl_gt__ = Pyfunc(jl_gt)
+    jv_module.__jl_ge__ = Pyfunc(jl_ge)
+    jv_module.__jl_contains__ = Pyfunc(jl_contains)
+    jv_module.__jl_invert__ = Pyfunc(jl_invert)
+    jv_module.__jl_bool__ = Pyfunc(jl_bool)
+    jv_module.__jl_pos__ = Pyfunc(jl_pos)
+    jv_module.__jl_neg__ = Pyfunc(jl_neg)
+    jv_module.__jl_abs__ = Pyfunc(jl_abs)
+    jv_module.__jl_hash__ = Pyfunc(jl_hash)
+    jv_module.__jl_repr__ = Pyfunc(jl_repr)
+    jv_module._jl_repr_pretty_ = Pyfunc(jl_display)
     nothing
 end
 
+function evaluate(s::String)
+    Base.eval(Main, Meta.parseall(s))
+end
 
+@export_py function setup_basics(ns::Py)::Nothing
+    ns.Base = reasonable_box(Base)
+    ns.Main = reasonable_box(Main)
+    ns.evaluate = reasonable_box(evaluate)
+    nothing
+end
 
 # this is called after CPython.init()
 function init()
     builtins = CPython.get_py_builtin()
     numpy = CPython.get_numpy()
+    MyPyAPI.iter = builtins.iter
     MyPyAPI.class = builtins.type
     MyPyAPI.dict = builtins.dict
     MyPyAPI.next = builtins.next
@@ -430,12 +500,17 @@ function init()
     MyPyAPI.float = builtins.float
     MyPyAPI.bool = builtins.bool
     MyPyAPI.str = builtins.str
+    MyPyAPI.object = builtins.object
     MyPyAPI.complex = builtins.complex
     MyPyAPI.ndarray = numpy.ndarray
     @export_pymodule _tyjuliacall_jnumpy begin
         setup_jv = Pyfunc(setup_jv)
+        setup_basics = Pyfunc(setup_basics)
     end
+    nothing
 end
+
+precompile(init, ())
 
 function __init__()
     empty!(_store_string_symbols)
