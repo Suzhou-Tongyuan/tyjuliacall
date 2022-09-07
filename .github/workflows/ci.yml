@@ -1,0 +1,44 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        OS: [Ubuntu, macOS, Windows]
+        python-version: ["3.7"]
+        include:
+          - os: Ubuntu
+            image: ubuntu-22.04
+          - os: Windows
+            image: windows-2022
+          - os: macOS
+            image: macos-12
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      run: pip install poetry
+
+    - name: Test
+      run: |
+        pip install .
+        pip install pytest coverage
+        coverage run --source=tyjuliasetup -m pytest -s && coverage report && coverage xml
+    - name: Python Cov
+      uses: codecov/codecov-action@v2
+      with:
+        files: coverage.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        verbose: true

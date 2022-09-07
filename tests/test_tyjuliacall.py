@@ -74,3 +74,49 @@ def test_conversion():
         Base.identity([])
     except Exception as e:
         pass
+
+    _r = repr(JuliaEvaluator["String[\"1\"]"])
+    assert str.startswith(_r, "<JV(")
+    assert r'["1"]' in _r
+
+    ts = list(JuliaEvaluator[r'Any[1, "2", []]'])
+    assert ts[0] == 1
+    assert ts[1] == "2"
+    assert isinstance(ts[2], JV) and list(ts[2]) == []
+
+    jdict = Base.Dict()
+    jdict[1, 2] = 3
+    assert jdict[1, 2] == 3
+    assert Base.haskey(jdict, (1, 2))
+
+    pi = JuliaEvaluator["pi"]
+    assert pi + 1 == JuliaEvaluator["pi + 1"]
+    assert pi - 1 == JuliaEvaluator["pi - 1"]
+    assert pi * 5 == JuliaEvaluator["pi * 5"]
+    assert pi / 2 == JuliaEvaluator["pi / 2"]
+    assert pi // 2 == JuliaEvaluator["div(pi, 2)"]
+    assert (pi > 2) == JuliaEvaluator["pi > 2"]
+    assert (pi >= 2) == JuliaEvaluator["pi >= 2"]
+    assert (pi < 2) == JuliaEvaluator["pi < 2"]
+    assert (pi <= 2) == JuliaEvaluator["pi <= 2"]
+    assert (pi == 2) == JuliaEvaluator["pi == 2"]
+    assert (pi != 2) == JuliaEvaluator["pi != 2"]
+    assert (pi ** 2) == JuliaEvaluator["pi ^ 2"]
+    assert (pi % 2) == JuliaEvaluator["pi % 2"]
+    assert (abs(pi)) == JuliaEvaluator["abs(pi)"]
+    assert (-(pi)) == JuliaEvaluator["-(pi)"]
+    assert (hash(pi)) == JuliaEvaluator["hash(pi) % Int64"]
+    assert (+(pi)) == JuliaEvaluator["+(pi)"]
+
+
+    bitarray = JuliaEvaluator["bitarray = BitArray([1, 0])"]
+    assert True in bitarray
+    assert (bitarray @ Base.transpose(bitarray)) == JuliaEvaluator["bitarray * bitarray'"]
+    assert (bitarray >> 2) == JuliaEvaluator["bitarray >> 2"]
+    assert (bitarray << 2) == JuliaEvaluator["bitarray << 2"]
+
+    missing = JuliaEvaluator["missing"]
+    assert (missing | 2) == JuliaEvaluator["missing | 2"]
+    assert (missing & 2) == JuliaEvaluator["missing & 2"]
+    assert (missing ^ 2) == JuliaEvaluator["missing  ⊻ 2"]
+    assert (~missing) == JuliaEvaluator["~missing"]

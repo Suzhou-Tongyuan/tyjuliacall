@@ -192,7 +192,9 @@ function reasonable_box(x::Any)::Py
 
     if x isa AbstractArray
         elt = eltype(typeof(x))
-        if elt === Bool
+        if x isa BitArray
+            return box_julia(x)
+        elseif elt === Bool
             np = CPython.get_numpy()
             return py_cast(Py, reinterpret(UInt8, x)).astype(np.bool_)
         elseif elt <: JNumPySupportedNumPyArrayBoxingElementTypes
