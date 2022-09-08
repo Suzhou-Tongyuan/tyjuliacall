@@ -71,7 +71,7 @@ TIPS: 如何传递`bytearray`或者`bytes`到Julia?
 
 2. 向Julia函数传递bytearray时，可以改为传递一个uint8的数组。
 
-    无拷贝传参： `np.asarray(bytearrat(b'mybytes')))`
+    无拷贝传参： `np.asarray(bytearray(b'mybytes')))`
 
 ### Julia数据传递到Python
 
