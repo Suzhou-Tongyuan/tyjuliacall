@@ -1,4 +1,5 @@
 from __future__ import annotations
+from . import compat
 import contextlib
 import ctypes
 import shutil
@@ -14,6 +15,7 @@ import shlex
 from types import ModuleType
 
 PYTHONPATH = pathlib.Path(sys.executable).resolve().as_posix()
+del compat
 
 
 def invoke_julia(jl_exepath: str, args: list[str], *, supress_errors: bool = True):
