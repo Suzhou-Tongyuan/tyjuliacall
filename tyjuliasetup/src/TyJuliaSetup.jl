@@ -142,12 +142,6 @@ function reasonable_unbox(py::Py)
                     end
                     return reshape(data, shape)
                 end
-            elseif typename == "bool"
-                let
-                    np = CPython.get_numpy()
-                    # TODO: use reinterpreted array?
-                    return reinterpret(Bool, CPython.from_ndarray(py.astype(np.uint8)))
-                end
             else
                 return box_julia(py)
             end
@@ -163,7 +157,7 @@ end
 const JNumPySupportedNumPyArrayBoxingElementTypes = Union{
     Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64,
     Float16, Float32, Float64,
-    ComplexF16, ComplexF32, ComplexF64
+    ComplexF16, ComplexF32, ComplexF64, Bool
 }
 
 function reasonable_box(x::Any)::Py
@@ -194,9 +188,6 @@ function reasonable_box(x::Any)::Py
         elt = eltype(typeof(x))
         if x isa BitArray
             return box_julia(x)
-        elseif elt === Bool
-            np = CPython.get_numpy()
-            return py_cast(Py, reinterpret(UInt8, x)).astype(np.bool_)
         elseif elt <: JNumPySupportedNumPyArrayBoxingElementTypes
             return py_cast(Py, x)
         else
