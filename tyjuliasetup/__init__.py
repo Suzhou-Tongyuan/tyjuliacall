@@ -165,7 +165,7 @@ def use_sysimage(path: str | pathlib.Path):
         path = pathlib.Path(path)
     Environment.TYPY_JL_SYSIMAGE = path.absolute().as_posix()
 
-def use_systemTyPython(yes: bool=True):
+def use_systemtypython(yes: bool=True):
     if yes:
         Environment.USE_SYSTEM_TYPYTHON = "True"
     else:
