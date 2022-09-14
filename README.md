@@ -30,6 +30,8 @@ pip install -U tyjuliacall
 ```python
 from tyjuliasetup import use_sysimage  # CAUTIOUS: not 'tyjuliacall'!
 use_sysimage(r"/path/to/sysimg")
+# if your sysimage contains TyPython,
+# you could call use_systemTyPython() to reduce the time cost of setting up julia.
 from tyjuliacall import Base
 print(
     "current sysimage in use",
