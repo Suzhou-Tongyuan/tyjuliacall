@@ -81,6 +81,7 @@ class ENV:
     JULIA_CONDAPKG_BACKEND: str
     PYTHON_JULIAPKG_OFFLINE: str
     PYTHON_JULIACALL_SYSIMAGE: str
+    USE_SYSTEM_TYPYTHON: str
 
     def __init__(self, env=None):
         self._env = env
@@ -164,6 +165,12 @@ def use_sysimage(path: str | pathlib.Path):
         path = pathlib.Path(path)
     Environment.TYPY_JL_SYSIMAGE = path.absolute().as_posix()
 
+def use_system_typython(yes: bool=True):
+    if yes:
+        Environment.USE_SYSTEM_TYPYTHON = "True"
+    else:
+        Environment.USE_SYSTEM_TYPYTHON = ""
+
 
 class _JuliaCodeEvaluatorClass:
     _eval_func: typing.Any
@@ -226,7 +233,10 @@ def setup():
     Environment.JULIA_PYTHONCALL_EXE = "@PyCall"
     Environment.PYTHON_JULIACALL_SYSIMAGE = BASE_IMAGE
 
-    jnumpy.init_jl()
+    if Environment.USE_SYSTEM_TYPYTHON:
+        jnumpy.init_jl(experimental_fast_init=True)
+    else:
+        jnumpy.init_jl()
     jnumpy.init_project(__file__)
     jnumpy.exec_julia("Pkg.activate(io=devnull)")
     import _tyjuliacall_jnumpy  # type: ignore
