@@ -1,10 +1,13 @@
 def test_all():
     # test_invoke
     from tyjuliasetup import invoke_julia, use_sysimage
-    invoke_julia("julia", ['-e', 'error("a")'], supress_errors=False)
-    sysimage = invoke_julia("julia", ['-e', 'println(Base.unsafe_string(Base.JLOptions().image_file))'])
+
+    invoke_julia("julia", ["-e", 'error("a")'], supress_errors=False)
+    sysimage = invoke_julia(
+        "julia", ["-e", "println(Base.unsafe_string(Base.JLOptions().image_file))"]
+    )
     assert sysimage
-    use_sysimage(sysimage.decode('utf-8').strip())
+    use_sysimage(sysimage.decode("utf-8").strip())
 
     # test conversion
     from tyjuliacall import JV, JuliaEvaluator, Base
@@ -129,19 +132,22 @@ def test_all():
     assert (missing ^ 2) == JuliaEvaluator["missing  ⊻ 2"]
     assert (~missing) == JuliaEvaluator["~missing"]
 
-
     # test miscellaneous
     from tyjuliasetup import Environment
+
     Environment._env = None
     Environment.TYPY_JL_OPTS = ""
     import os
-    os.environ['TYPY_JL_OPTS'] = ""
+
+    os.environ["TYPY_JL_OPTS"] = ""
     assert Environment.TYPY_JL_OPTS == ""
 
-    import tyjuliacall.Base.Multimedia as Multimedia # type: ignore
+    import tyjuliacall.Base.Multimedia as Multimedia  # type: ignore
+
     dir(Multimedia)
     repr(Multimedia)
-    from tyjuliacall.Base.Multimedia import display # type: ignore
+    from tyjuliacall.Base.Multimedia import display  # type: ignore
+
     try:
         exec("from tyjuliacall.Base.Multimedia import *", {})
     except Exception:
