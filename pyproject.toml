@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tyjuliacall"
-version = "0.5.0"
+version = "0.6.0"
 description = "A Python package for Tongyuan-hacked PyCall as an engineerization for Python-Julia interops."
 authors = ["Suzhou-Tongyuan <support@tongyuan.cc>"]
 packages = [
@@ -12,7 +12,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-julia-numpy = "^0.4.0"
+julia-numpy = "^0.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
