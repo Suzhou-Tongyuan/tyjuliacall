@@ -4,6 +4,10 @@ using TyPython.CPython
 using TyPython.CPython: PyAPI, Py_NULLPTR, py_throw
 using TyPython: C
 
+if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@compiler_options"))
+    @eval Base.Experimental.@compiler_options compile=min optimize=0 infer=no
+end
+
 const _store_string_symbols = Dict{String, Symbol}()
 
 function attr_name_to_symbol(s::String)::Symbol
