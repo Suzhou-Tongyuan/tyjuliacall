@@ -11,6 +11,7 @@ def test_all():
 
     # test conversion
     from tyjuliacall import JV, JuliaEvaluator, Base
+    from tyjuliasetup import _get_pyjulia_core_provider
     import numpy as np
 
     xs = JuliaEvaluator["zs = String[]"]

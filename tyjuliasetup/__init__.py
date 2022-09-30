@@ -209,6 +209,8 @@ def use_sysimage(path: str | pathlib.Path):
 def use_system_typython(yes: bool = True):
     pass
 
+def use_backend(backend : typing.Literal['pycall', 'jnumpy']):
+    Environment.PYJULIA_CORE = backend
 
 class _JuliaCodeEvaluatorClass:
     _eval_func: typing.Any
@@ -281,19 +283,17 @@ def setup():
         nonlocal lib
         lib = _lib
 
+    user_set_pyjulia_core = Environment.PYJULIA_CORE
     with tictoc("Julia initialized in {} seconds"):
         jnumpy.init.init_libjulia(_init, experimental_fast_init=True)
 
-    # PyCall might adjust PyJULIA_CORE environment
-    with tictoc("PyCall initialized in  {} seconds"):
-        try:
-            if not Environment.PYJULIA_CORE:
-                lib.jl_eval_string("import PyCall".encode("utf-8"))
-        except:
-            pass
+    # to workaround sysimage `__init__`
+    if user_set_pyjulia_core:
+        Environment.PYJULIA_CORE = user_set_pyjulia_core
+    else:
+        Environment.PYJULIA_CORE = "jnumpy"
 
     pyjulia_core_provider = _get_pyjulia_core_provider()
-
     with tictoc("PyJulia-Core initialized in {} seconds"):
         if pyjulia_core_provider == "jnumpy":
             jnumpy.init.init_jl_from_lib(lib)
@@ -307,6 +307,7 @@ def setup():
             _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)
             _tyjuliacall_jnumpy.JV = jv.JV
         elif pyjulia_core_provider == "pycall":
+            lib.jl_eval_string("import PyCall".encode("utf-8"))
             lib.jl_eval_string("Pkg.activate(io=devnull)".encode("utf-8"))
             _load_pyjulia_core()
         else:
