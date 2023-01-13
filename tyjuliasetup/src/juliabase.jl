@@ -134,7 +134,6 @@ const Meth_Names = (
 
 function _init_juliabase()
     empty!(_pyjlbase_methods)
-    # todo(songjhaha): codegen
     push!(_pyjlbase_methods,
         PyMethodDef(
             ml_name = pointer(Meth_Names.__getattr__),
@@ -189,11 +188,6 @@ function _init_juliabase()
         PyMethodDef(
             ml_name = pointer(Meth_Names.__bool__),
             ml_meth = @cfunction(_pyjl_bool, C.Ptr{PyObject}, (C.Ptr{PyObject}, C.Ptr{PyObject})),
-            ml_flags = METH_NOARGS,
-        ),
-        PyMethodDef(
-            ml_name = pointer(Meth_Names._jl_repr_pretty_),
-            ml_meth = @cfunction(_pyjl_repr_pretty, C.Ptr{PyObject}, (C.Ptr{PyObject}, C.Ptr{PyObject})),
             ml_flags = METH_NOARGS,
         ),
         PyMethodDef(
@@ -303,6 +297,11 @@ function _init_juliabase()
         PyMethodDef(
             ml_name = pointer(Meth_Names._jl_next_iter_),
             ml_meth = @cfunction(_pyjl_next_iter, C.Ptr{PyObject}, (C.Ptr{PyObject}, C.Ptr{PyObject})),
+            ml_flags = METH_O,
+        ),
+        PyMethodDef(
+            ml_name = pointer(Meth_Names._jl_repr_pretty_),
+            ml_meth = @cfunction(_pyjl_repr_pretty, C.Ptr{PyObject}, (C.Ptr{PyObject}, C.Ptr{PyObject})),
             ml_flags = METH_O,
         ),
         PyMethodDef(),

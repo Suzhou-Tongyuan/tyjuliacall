@@ -26,11 +26,15 @@ function pyjl_bool(self)
     return py_cast(Py, true)
 end
 
-function pyjl_display(self)::String
+function pyjl_display(self, terminal_size)::String
     old_stdout = stdout
     rd, wr = redirect_stdout()
     try
-        show(wr, "text/plain", self)
+        show(
+            IOContext(wr, :limit=>true, :displaysize=>terminal_size),
+            "text/plain",
+            self
+        )
     finally
         try
             close(wr)
@@ -54,7 +58,6 @@ for (pyfname, op) in [
     (:_pyjl_abs, :abs),
     (:_pyjl_hash, :pyjl_hash),
     (:_pyjl_bool, :pyjl_bool),
-    (:_pyjl_repr_pretty, :pyjl_display),
     (:_pyjl_first_iter, :iterate),
 ]
     @eval begin
@@ -99,6 +102,7 @@ for (pyfname, op) in [
     (:_pyjl_pow, :^),
     (:_pyjl_contains, :pyjl_contains),
     (:_pyjl_next_iter, :iterate),
+    (:_pyjl_repr_pretty, :pyjl_display),
 ]
     @eval begin
         function $pyfname(self_::C.Ptr{PyObject}, other_::C.Ptr{PyObject})

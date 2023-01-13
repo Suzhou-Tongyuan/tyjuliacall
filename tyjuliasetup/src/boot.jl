@@ -38,11 +38,14 @@ function _init_jv_type()
     builtins = get_py_builtin()
     builtins.exec(builtins.compile(py_cast(Py,"""
     $("\n"^(@__LINE__()-1))
+    import shutil
     class JV(JuliaBase):
         __slots__ = ()
 
         def _repr_pretty_(self, p, cycle):
-            p.text(self._jl_repr_pretty_() if not cycle else "...")
+            terminal_size = shutil.get_terminal_size((80, 20))
+            terminal_size = (terminal_size.lines, terminal_size.columns)
+            p.text(self._jl_repr_pretty_(terminal_size) if not cycle else "...")
 
         def __iter__(self):
             pair = self._jl_first_iter_()
