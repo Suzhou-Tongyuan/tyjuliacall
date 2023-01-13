@@ -301,11 +301,7 @@ def setup():
             jnumpy.exec_julia("Pkg.activate(io=devnull)")
 
             import _tyjuliacall_jnumpy  # type: ignore
-            from tyjuliasetup import jv
 
-            _tyjuliacall_jnumpy.setup_jv(jv.JV, jv)
-            _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)
-            _tyjuliacall_jnumpy.JV = jv.JV
         elif pyjulia_core_provider == "pycall":
             lib.jl_eval_string("import PyCall".encode("utf-8"))
             lib.jl_eval_string("Pkg.activate(io=devnull)".encode("utf-8"))
