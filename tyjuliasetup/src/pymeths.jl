@@ -27,11 +27,11 @@ function _pyjl_call(self_::C.Ptr{PyObject}, pyargs::C.Ptr{PyObject}, pykwargs::C
     try
         if pykwargs !== Py_NULLPTR
             nkwargs = PyAPI.PyDict_Size(pykwargs)
-            args = auto_unbox_args(Py(BorrowReference(), pyargs), nargs)
-            kwargs = auto_unbox_kwargs(Py(BorrowReference(), pykwargs), nkwargs)
+            args = auto_unbox_args(Py(NewReference(), pyargs), nargs)
+            kwargs = auto_unbox_kwargs(Py(NewReference(), pykwargs), nkwargs)
             ans = auto_box(self(args...; kwargs...))
         elseif nargs > 0
-            args = auto_unbox_args(Py(BorrowReference(), pyargs), nargs)
+            args = auto_unbox_args(Py(NewReference(), pyargs), nargs)
             ans = auto_box(self(args...))
         else
             ans = auto_box(self())
@@ -51,7 +51,7 @@ function _pyjl_getattr(self_::C.Ptr{PyObject}, k_::C.Ptr{PyObject})
     end
     self = PyJuliaValue_GetValue(self_)
     try
-        k = attribute_string_to_symbol(py_coerce(String, Py(BorrowReference(), k_)))
+        k = attribute_string_to_symbol(py_coerce(String, Py(NewReference(), k_)))
         ans = auto_box(getproperty(self, k))
         out = unsafe_unwrap(ans)
         PyAPI.Py_IncRef(out)
@@ -74,8 +74,8 @@ function _pyjl_setattr(self_::C.Ptr{PyObject}, vectorargs::Ptr{C.Ptr{PyObject}},
     k_ = unsafe_load(vectorargs, 1)
     v_ = unsafe_load(vectorargs, 2)
     try
-        k = attribute_string_to_symbol(py_coerce(String, Py(BorrowReference(), k_)))
-        v = auto_unbox(Py(BorrowReference(), v_))
+        k = attribute_string_to_symbol(py_coerce(String, Py(NewReference(), k_)))
+        v = auto_unbox(Py(NewReference(), v_))
         setproperty!(self, k, v)
         out = unsafe_unwrap(PyAPI.Py_None)
         PyAPI.Py_IncRef(out)
@@ -93,9 +93,9 @@ function _pyjl_getitem(self_::C.Ptr{PyObject}, item_::C.Ptr{PyObject})
     self = PyJuliaValue_GetValue(self_)
     try
         if is_type_exact(item_, MyPyAPI.tuple)
-            ans = auto_box(getindex(self, auto_unbox(Py(BorrowReference(), item_))...))
+            ans = auto_box(getindex(self, auto_unbox(Py(NewReference(), item_))...))
         else
-            ans = auto_box(getindex(self, auto_unbox(Py(BorrowReference(), item_))))
+            ans = auto_box(getindex(self, auto_unbox(Py(NewReference(), item_))))
         end
         out = unsafe_unwrap(ans)
         PyAPI.Py_IncRef(out)
@@ -121,14 +121,14 @@ function _pyjl_setitem(self_::C.Ptr{PyObject}, vectorargs::Ptr{C.Ptr{PyObject}},
         if is_type_exact(item_, MyPyAPI.tuple)
             setindex!(
                 self,
-                auto_unbox(Py(BorrowReference(), val_)),
-                auto_unbox(Py(BorrowReference(), item_))...
+                auto_unbox(Py(NewReference(), val_)),
+                auto_unbox(Py(NewReference(), item_))...
             )
         else
             setindex!(
                 self,
-                auto_unbox(Py(BorrowReference(), val_)),
-                auto_unbox(Py(BorrowReference(), item_))
+                auto_unbox(Py(NewReference(), val_)),
+                auto_unbox(Py(NewReference(), item_))
             )
         end
         out = unsafe_unwrap(PyAPI.Py_None)

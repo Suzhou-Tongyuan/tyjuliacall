@@ -107,7 +107,7 @@ for (pyfname, op) in [
                 return Py_NULLPTR
             end
             self = PyJuliaValue_GetValue(self_)
-            other = auto_unbox(Py(BorrowReference(), other_))
+            other = auto_unbox(Py(NewReference(), other_))
             try
                 ans = $op(self, other)
                 out = unsafe_unwrap(auto_box(ans))

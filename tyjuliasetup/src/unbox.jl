@@ -1,6 +1,3 @@
-# traits to map python type to julia type
-const PyTypeDict = Dict{C.Ptr{PyObject}, Any}()
-
 const G_STRING_SYM_MAP = Dict{String, Symbol}()
 function attribute_string_to_symbol(x::String)
     get!(G_STRING_SYM_MAP, x) do
@@ -95,7 +92,7 @@ end
 function auto_unbox_args(pyargs::Py, nargs::Int)
     args = Vector{Any}(undef, nargs)
     for i in 1:nargs
-        args[i] = auto_unbox(Py(BorrowReference(), PyAPI.PyTuple_GetItem(pyargs, i-1)))
+        args[i] = auto_unbox(Py(NewReference(), PyAPI.PyTuple_GetItem(pyargs, i-1)))
     end
     return args
 end
@@ -105,8 +102,8 @@ function auto_unbox_kwargs(pykwargs::Py, nkwargs::Int)
     pyk = PyAPI.PyDict_Keys(pykwargs)
     pyv = PyAPI.PyDict_Values(pykwargs)
     for i in 1:nkwargs
-        k = auto_unbox(Py(BorrowReference(), PyAPI.PyList_GetItem(pyk, i-1)))
-        v = auto_unbox(Py(BorrowReference(), PyAPI.PyList_GetItem(pyv, i-1)))
+        k = auto_unbox(Py(NewReference(), PyAPI.PyList_GetItem(pyk, i-1)))
+        v = auto_unbox(Py(NewReference(), PyAPI.PyList_GetItem(pyv, i-1)))
         push!(kwargs, attribute_string_to_symbol(k) => v)
     end
     return kwargs

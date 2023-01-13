@@ -3,7 +3,7 @@ module TyJuliaSetup
 using TyPython
 using TyPython.CPython
 import TyPython.C
-import TyPython.CPython: UnsafeNew, BorrowReference, PyObject, Py_ssize_t, PyTypeObject, PyMethodDef, Py_NULLPTR
+import TyPython.CPython: NewReference, UnsafeNew, BorrowReference, PyObject, Py_ssize_t, PyTypeObject, PyMethodDef, Py_NULLPTR
 import TyPython.CPython: PyAPI, unsafe_set!, unsafe_unwrap, G_PyBuiltin, py_seterror!, capture_out, _to_py_error
 import TyPython.CPython: attribute_symbol_to_pyobject
 
