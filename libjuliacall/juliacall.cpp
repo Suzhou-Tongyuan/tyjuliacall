@@ -7,6 +7,7 @@
 typedef void *(*t_jl_eval_string)(const char *code);
 typedef struct _jl_value_t jl_value_t;
 typedef jl_value_t *(*t_jl_exception_occurred)();
+static const JV JV_NULL = 0;
 static t_jl_eval_string jl_eval_string = NULL;
 static t_jl_exception_occurred jl_exception_occurred = NULL;
 static PyObject *JuliaCallError;
@@ -14,6 +15,7 @@ static PyObject *JVType;
 static PyObject *name_slot;
 static JSym errorSym;
 static JV f_jl_square;
+static JV f_jl_display;
 
 DLLEXPORT int init_libjuliacall(void *lpfnJlEvalString, void *lpfnJlExceptionOccurred, void *lpfnJLCApiGetter)
 {
@@ -33,7 +35,7 @@ static double jl_square(float x)
   JV jv_x;
   ToJLFloat64(&jv_x, x);
 
-  if (f_jl_square == 0)
+  if (f_jl_square == JV_NULL)
   {
     const char *_square_code = "square(x) = x^2";
     char *square_code = const_cast<char *>(_square_code);
@@ -90,6 +92,14 @@ static PyObject *box_julia(JV jv)
   return pyjv;
 }
 
+static JV *unbox_julia(PyObject *pyjv)
+{
+  PyObject *capsule = PyObject_GetAttr(pyjv, name_slot);
+  JV *jv = (JV *)PyCapsule_GetPointer(capsule, NULL);
+  Py_DecRef(capsule);
+  return jv;
+}
+
 static PyObject *jl_eval_wrapper(PyObject *self, PyObject *args)
 {
   const char *_command;
@@ -135,10 +145,22 @@ static PyObject *setup_jv(PyObject *self, PyObject *arg)
   return Py_None;
 }
 
+static PyObject *jl_display(PyObject *self, PyObject *arg)
+{
+  // 1. unbox jv from arg (use unbox_julia)
+  // 2. call julia function "repr" to get julia's string
+  // 3. convert julia's string to native string
+  // 4. wrap native string to python string and return
+
+  // note: 可能很多地方都会注意到错误处理，可以暂时简单地标记一下，对错误处理后面会整理成一些框架或者宏
+  // note: 可以暂时先假设入参一定是 Python 的 JV 类型
+}
+
 static PyMethodDef example_methods[] = {
     {"jl_square", square_wrapper, METH_VARARGS, "Square function"},
     {"jl_eval", jl_eval_wrapper, METH_VARARGS, "eval julia function and return a python capsule"},
     {"setup_jv", setup_jv, METH_O, "setup JV class"},
+    {"jl_display", jl_display, METH_O, "display JV as string"},
     {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef example_module = {PyModuleDef_HEAD_INIT, "_tyjuliacall_jnumpy",
