@@ -296,16 +296,23 @@ def setup():
     pyjulia_core_provider = _get_pyjulia_core_provider()
     with tictoc("PyJulia-Core initialized in {} seconds"):
         if pyjulia_core_provider == "jnumpy":
-            jnumpy.init.init_jl_from_lib(lib)
-            jnumpy.init_project(__file__)
-            jnumpy.exec_julia("Pkg.activate(io=devnull)")
+            with tictoc("init_jl_from_lib in {} seconds"):
+                jnumpy.init.init_jl_from_lib(lib)
 
-            import _tyjuliacall_jnumpy  # type: ignore
+            with tictoc("init_project in {} seconds"):
+                jnumpy.init_project(__file__)
+
+            with tictoc("exec_julia in {} seconds"):
+                jnumpy.exec_julia("Pkg.activate(io=devnull)")
+
+            # import _tyjuliacall_jnumpy  # type: ignore
             from tyjuliasetup import jv
 
-            _tyjuliacall_jnumpy.setup_jv(jv.JV, jv)
-            _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)
-            _tyjuliacall_jnumpy.JV = jv.JV
+            with tictoc("setup_jv in {} seconds"):
+                pass
+                # _tyjuliacall_jnumpy.setup_jv(jv.JV, jv)
+                # _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)
+                # _tyjuliacall_jnumpy.JV = jv.JV
         elif pyjulia_core_provider == "pycall":
             lib.jl_eval_string("import PyCall".encode("utf-8"))
             lib.jl_eval_string("Pkg.activate(io=devnull)".encode("utf-8"))
