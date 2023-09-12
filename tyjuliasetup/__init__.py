@@ -305,12 +305,11 @@ def setup():
             with tictoc("exec_julia in {} seconds"):
                 jnumpy.exec_julia("Pkg.activate(io=devnull)")
 
-            # import _tyjuliacall_jnumpy  # type: ignore
+            import _tyjuliacall_jnumpy  # type: ignore
             from tyjuliasetup import jv
 
             with tictoc("setup_jv in {} seconds"):
-                pass
-                # _tyjuliacall_jnumpy.setup_jv(jv.JV, jv)
+                _tyjuliacall_jnumpy.setup_jv(jv.JV)
                 # _tyjuliacall_jnumpy.setup_basics(_tyjuliacall_jnumpy)
                 # _tyjuliacall_jnumpy.JV = jv.JV
         elif pyjulia_core_provider == "pycall":

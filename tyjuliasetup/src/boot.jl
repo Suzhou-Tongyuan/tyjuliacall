@@ -33,7 +33,7 @@ function boot()
     )
     PyModule = Py(CPython.UnsafeNew(), CPython.C.Ptr{PyObject}(LP_pym))
 
-    CPython.G_PyBuiltin.__import__(py_cast(Py, "sys")).modules[py_cast(Py, "example")] = PyModule
+    CPython.G_PyBuiltin.__import__(py_cast(Py, "sys")).modules[py_cast(Py, "_tyjuliacall_jnumpy")] = PyModule
 
     return nothing
 end
