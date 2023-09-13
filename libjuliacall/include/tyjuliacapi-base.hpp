@@ -1,4 +1,5 @@
 // This file is generated. Do not modify it directly.
+#pragma GCC diagnostic ignored "-Wconversion-null"
 #include "tyjuliacapi-types.hpp"
 
 
