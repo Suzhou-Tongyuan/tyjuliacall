@@ -71,6 +71,16 @@ STuple<L, R> STuple_adapt(L l, R r)
     return res;
 }
 
+
+SList<JV> emptyArgs()
+{
+    // return only value
+    SList<JV> res;
+    res.len = 0;
+    res.data = nullptr;
+    return res;
+}
+
 SList<STuple<JSym, JV>> emptyKwArgs()
 {
     // return only value

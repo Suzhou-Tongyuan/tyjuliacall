@@ -1,3 +1,6 @@
+#ifndef TYJULIACAPI_H
+#define TYJULIACAPI_H
+
 #include "tyjuliacapi-base.hpp"
 
 #define USE_STACKTRACE_MSG_LOCALLY _use_stacktrace_msg_t _localvar ## __LINE__ ## __FILE__ ## __FUNCTION__;
@@ -21,3 +24,5 @@ public:
         JLError_EnableBackTraceMsg(_is_enabled);
     }
 };
+
+#endif

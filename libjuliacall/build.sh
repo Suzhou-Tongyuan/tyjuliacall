@@ -1,12 +1,16 @@
 libpython_files=$(python -m find_libpython)
 if [ -z "$libpython_files" ]; then
-    echo "libpython not found"
+    echo "error! libpython not found, try 'pip install find_libpython'"
     exit 1
 fi
 
 # replace it with your include
-include_dir="C:/Users/TR/AppData/Local/miniforge3/include"
+include_dir=""
 
+if [ -z "$include_dir" ]; then
+    echo "error! python include not set, please set it in build.sh"
+    exit 1
+fi
 
 lib_dir=$(dirname "$libpython_files")
 full_basename=$(basename "$libpython_files")

@@ -12,6 +12,11 @@ ErrorCode JLEval(/* out */JV* out, JV module, SList<uint8_t> code) {
     return _fptr_JLEval(out, module, code);
 }
 
+ErrorCode JLEval(/* out */JV* out, JV module, const char* code) {
+    char* code_copy = const_cast<char*>(code);
+    return _fptr_JLEval(out, module, SList_adapt(reinterpret_cast<uint8_t*>(code_copy), strlen(code_copy)));
+}
+
 ErrorCode (*_fptr_FetchJLErrorSize)(/* out */int64_t* size);
 ErrorCode FetchJLErrorSize(/* out */int64_t* size) {
     return _fptr_FetchJLErrorSize(size);
