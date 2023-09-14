@@ -490,6 +490,7 @@ include("boot.jl")
 
 # this is called after CPython.init()
 function init()
+    TyPython.CPython.init()
     boot()
     # builtins = CPython.get_py_builtin()
     # numpy = CPython.get_numpy()

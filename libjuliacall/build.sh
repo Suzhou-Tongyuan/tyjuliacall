@@ -5,7 +5,7 @@ if [ -z "$libpython_files" ]; then
 fi
 
 # replace it with your include
-include_dir=""
+include_dir="C:/Users/TR/AppData/Local/miniforge3/include"
 
 if [ -z "$include_dir" ]; then
     echo "error! python include not set, please set it in build.sh"
@@ -13,14 +13,10 @@ if [ -z "$include_dir" ]; then
 fi
 
 lib_dir=$(dirname "$libpython_files")
-full_basename=$(basename "$libpython_files")
-libpython="${full_basename%.*}"
-echo "libpython: $libpython"
+
 echo "lib_dir: $lib_dir"
 echo "include_dir: $include_dir"
 
-
-
-g++ -fPIC -shared juliacall.cpp -o libjuliacall.dll -I./include -I$include_dir -L$lib_dir -l$libpython
+g++ -fPIC -shared juliacall.cpp -o libjuliacall.dll -I./include -I$include_dir -L$lib_dir -lpython3
 cp libjuliacall.dll ../tyjuliasetup/src/libjuliacall.dll
 

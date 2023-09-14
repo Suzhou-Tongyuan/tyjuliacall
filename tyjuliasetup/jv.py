@@ -42,8 +42,9 @@ class JV:
     # def __call__(self, *args, **kwargs):
     #     return __jl_invoke__(self, args, kwargs)
 
-    # def __getattr__(self, name: str):
-    #     return __jl_getattr__(self, name)
+    def __getattr__(self, name: str):
+        import _tyjuliacall_jnumpy # type: ignore
+        return _tyjuliacall_jnumpy.jl_getattr(self, name)
 
     # def __setattr__(self, name: str, value: typing.Any):
     #     return __jl_setattr__(self, name, value)
@@ -132,8 +133,9 @@ class JV:
     # def __hash__(self):
     #     return __jl_hash__(self)
 
-    # def __repr__(self):
-    #     return __jl_repr__(self)
+    def __repr__(self):
+        import _tyjuliacall_jnumpy # type: ignore
+        return _tyjuliacall_jnumpy.jl_display(self)
 
     # def _repr_pretty_(self, p, cycle):
     #     p.text(_jl_repr_pretty_(self) if not cycle else "...")

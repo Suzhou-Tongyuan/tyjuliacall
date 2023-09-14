@@ -188,8 +188,8 @@ class JuliaLoader:
 
 def _jl_using(fullnames: tuple[str, ...]):
     pyjulia_core = _load_pyjulia_core()
-    evaluate = pyjulia_core.evaluate
-    Main = pyjulia_core.Main
+    evaluate = pyjulia_core.jl_eval
+    Main = evaluate("Main")
 
     M = evaluate("import {0};{0}".format(fullnames[0]))
     for submodulename in fullnames[1:]:
@@ -241,6 +241,55 @@ class _JuliaCodeEvaluatorClass:
 
 JuliaEvaluator = _JuliaCodeEvaluatorClass()
 
+def _exec_julia(x):
+    global _eval_jl
+    try:
+        _eval_jl(x)  # type: ignore
+    except NameError:
+        raise RuntimeError(
+            "name '_eval_jl' is not defined, should call setup() first"
+        )
+
+def _init_jl_from_lib(lib):
+    global _eval_jl
+
+    def _eval_jl(x: str):
+        with contextlib.redirect_stderr(io.StringIO()) as ef:
+            source_code = "{}".format(x)
+            source_code_bytes = source_code.encode("utf8")
+            if (
+                not lib.jl_eval_string(source_code_bytes)
+            ) and lib.jl_exception_occurred():
+                lib.jl_exception_clear()
+                raise jnumpy.init.JuliaError(ef.getvalue())
+            return None
+
+    # with tictoc("init CPython in {} seconds"):
+    #     try:
+    #         pass
+    #         # _exec_julia(
+    #         #     rf"""
+    #         #     import TyJuliaCAPI
+    #         #     """
+    #         # )
+    #         # import TyPython
+    #         # import TyPython.CPython
+    #         # TyPython.CPython.init()
+    #     except jnumpy.init.JuliaError:
+    #         raise RuntimeError("invalid julia initialization")
+
+    with tictoc("init TyJuliaSetup in {} seconds"):
+        try:
+            TyJuliaSetup_path = (
+                pathlib.Path(__file__).parent.absolute().joinpath("src").joinpath("TyJuliaSetup.jl").as_posix()
+            )
+            _exec_julia(
+                f"""
+                include({jnumpy.utils.escape_to_julia_rawstr(TyJuliaSetup_path)})
+                TyJuliaSetup.init()
+            """)
+        except jnumpy.init.JuliaError:
+            raise RuntimeError("invalid julia initialization")
 
 def setup():
     global BASE_IMAGE
@@ -296,14 +345,13 @@ def setup():
     pyjulia_core_provider = _get_pyjulia_core_provider()
     with tictoc("PyJulia-Core initialized in {} seconds"):
         if pyjulia_core_provider == "jnumpy":
-            with tictoc("init_jl_from_lib in {} seconds"):
-                jnumpy.init.init_jl_from_lib(lib)
+            _init_jl_from_lib(lib)
 
-            with tictoc("init_project in {} seconds"):
-                jnumpy.init_project(__file__)
+            # with tictoc("init_project in {} seconds"):
+            #     jnumpy.init_project(__file__)
 
-            with tictoc("exec_julia in {} seconds"):
-                jnumpy.exec_julia("Pkg.activate(io=devnull)")
+            # with tictoc("exec_julia in {} seconds"):
+            #     jnumpy.exec_julia("Pkg.activate(io=devnull)")
 
             import _tyjuliacall_jnumpy  # type: ignore
             from tyjuliasetup import jv

@@ -163,6 +163,11 @@ ErrorCode JSymFromString(/* out */JSym* out, SList<uint8_t> value) {
     return _fptr_JSymFromString(out, value);
 }
 
+ErrorCode JSymFromString(/* out */JSym* out, const char *value) {
+    char* value_copy = const_cast<char*>(value);
+    return _fptr_JSymFromString(out, SList_adapt(reinterpret_cast<uint8_t*>(value_copy), strlen(value_copy)));
+}
+
 ErrorCode (*_fptr_ToJLInt64)(/* out */JV* out, int64_t value);
 ErrorCode ToJLInt64(/* out */JV* out, int64_t value) {
     return _fptr_ToJLInt64(out, value);

@@ -1,13 +1,14 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <tyjuliacapi.hpp>
+#include <TyPython.hpp>
 #include <common.hpp>
 #include <assert.h>
 #include <time.h>
 
-DLLEXPORT int init_libjuliacall(void *lpfnJLCApiGetter, void *lpfnJlToJLPy)
+DLLEXPORT int init_libjuliacall(void *lpfnJLCApiGetter, void *lpfnPyCast2JL, void *lpfnPyCast2Py)
 {
-  if (to_JLPy != NULL)
+  if (pycast2jl != NULL && pycast2py != NULL)
   {
     return 0;
   }
@@ -18,88 +19,26 @@ DLLEXPORT int init_libjuliacall(void *lpfnJLCApiGetter, void *lpfnJlToJLPy)
     return 1;
   }
 
-  to_JLPy = (t_to_JLPy)lpfnJlToJLPy;
+  pycast2jl = (t_pycast2jl)lpfnPyCast2JL;
+  pycast2py = (t_pycast2py)lpfnPyCast2Py;
 
   return 0;
 }
 
-static double jl_square(float x)
+static PyObject *square_wrapper(PyObject *self, PyObject *args)
 {
-  // a simple example: call julia function and convert between julia and native types
-  JV jv_x;
-  ToJLFloat64(&jv_x, x);
-
-  if (f_jl_square == JV_NULL)
-  {
-    const char *_square_code = "square(x) = x^2";
-    char *square_code = const_cast<char *>(_square_code);
-    JLEval(&f_jl_square, NULL, SList_adapt(reinterpret_cast<uint8_t *>(square_code), strlen(square_code)));
-  }
+  JV v = reasonable_unbox(args);
 
   JV jret;
   JV arguments[1];
-  arguments[0] = jv_x;
-  JLCall(&jret, f_jl_square, SList_adapt(&arguments[0], 1), emptyKwArgs());
+  arguments[0] = v;
+  JLCall(&jret, MyJLAPI.f_square, SList_adapt(&arguments[0], 1), emptyKwArgs());
 
-  double ret;
-  JLGetDouble(&ret, jret, false);
-
-  JLFreeFromMe(jv_x);
+  PyObject* py = reasonable_box(jret);
   JLFreeFromMe(jret);
-
-  return ret;
+  return py;
 }
 
-static PyObject *square_wrapper(PyObject *self, PyObject *args)
-{
-  // convert bewteen python and native types
-  double input, result;
-  if (!PyArg_ParseTuple(args, "d", &input))
-  {
-    return NULL;
-  }
-  result = jl_square(input);
-  return PyFloat_FromDouble(result);
-}
-
-static void PyCapsule_Destruct_JuliaAsPython(PyObject *capsule)
-{
-  // destruct of capsule(__jlslot__)
-  JV *jv = (JV *)PyCapsule_GetPointer(capsule, NULL);
-  JLFreeFromMe(*jv);
-  free(jv);
-}
-
-static PyObject *box_julia(JV jv)
-{
-  // JV(julia value) -> PyObject(python's JV with __jlslot__)
-  JV *ptr_boxed = (JV *)malloc(sizeof(JV));
-  *ptr_boxed = jv;
-
-  PyObject *capsule = PyCapsule_New(
-      ptr_boxed,
-      NULL,
-      &PyCapsule_Destruct_JuliaAsPython);
-
-  PyObject *pyjv = PyObject_CallObject(MyPyAPI.t_JV, NULL);
-  if (pyjv == NULL)
-  {
-    PyErr_SetString(PyExc_RuntimeError, "box_julia: failed to create a new instance of JV");
-    return NULL;
-  }
-
-  PyObject_SetAttr(pyjv, name_slot, capsule);
-  return pyjv;
-}
-
-static JV *unbox_julia(PyObject *pyjv)
-{
-  // assume pyjv is a python's JV instance with __jlslot__
-  PyObject *capsule = PyObject_GetAttr(pyjv, name_slot);
-  JV *jv = (JV *)PyCapsule_GetPointer(capsule, NULL);
-  Py_DecRef(capsule);
-  return jv;
-}
 
 static PyObject *jl_eval_wrapper(PyObject *self, PyObject *args)
 {
@@ -149,30 +88,113 @@ static PyObject *setup_api(PyObject *self, PyObject *arg)
 
 static PyObject *jl_display(PyObject *self, PyObject *arg)
 {
-  // 1. unbox jv from arg (use unbox_julia)
-  // 2. call julia function "repr" to get julia's string
-  // 3. convert julia's string to native string
-  // 4. wrap native string to python string and return
+  // check arg type
+  if (!PyObject_IsInstance(arg, MyPyAPI.t_JV))
+  {
+    PyErr_SetString(JuliaCallError, "jl_display: expect object of JV class.");
+    return NULL;
+  }
 
-  // note: 可能很多地方都会注意到错误处理，可以暂时简单地标记一下，对错误处理后面会整理成一些框架或者宏
-  // note: 可以暂时先假设入参一定是 Python 的 JV 类型
-  Py_INCREF(Py_None);
-  return Py_None;
+  // unbox jv from arg (use unbox_julia)
+  JV jv = unbox_julia(arg);
+  JV jret;
+
+  // call julia function repr
+  ErrorCode ret = JLCall(&jret, MyJLAPI.f_repr, SList_adapt(&jv, 1), emptyKwArgs());
+  if (ret != ErrorCode::ok)
+  {
+    // TODO: better error handle
+    char errorBytes[2048] = {(char)0};
+    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
+    {
+      PyErr_SetString(JuliaCallError, errorBytes);
+    }
+    else
+    {
+      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
+    }
+    return NULL;
+  }
+
+  // convert Julia's String to Python's str.
+  // pycast2py is a C Function from julia,
+  // we could use JLGetUTF8String and PyUnicode_FromString instead,
+  // but this one is simple.
+  PyObject* pyjv = pycast2py(jret);
+
+  // don't need this, free it
+  JLFreeFromMe(jret);
+  return pyjv;
 }
 
-static PyMethodDef example_methods[] = {
-    {"jl_square", square_wrapper, METH_VARARGS, "Square function"},
+static PyObject *jl_getattr(PyObject *self, PyObject *args)
+{
+  // TODO
+  PyObject* pyjv;
+  const char* attr;
+  if (!PyArg_ParseTuple(args, "Os", &pyjv, &attr))
+  {
+    return NULL;
+  }
+
+  JV slf;
+  if (!PyObject_IsInstance(pyjv, MyPyAPI.t_JV))
+  {
+    PyErr_SetString(JuliaCallError, "jl_getattr: expect object of JV class.");
+    return NULL;
+  }
+  else
+  {
+    slf = unbox_julia(pyjv);
+  }
+
+  JSym sym;
+  JSymFromString(&sym, attr);
+
+  JV out;
+  ErrorCode ret = JLGetProperty(&out, slf, sym);
+  if (ret != ErrorCode::ok)
+  {
+    // TODO: better error handle
+    char errorBytes[2048] = {(char)0};
+    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
+    {
+      PyErr_SetString(JuliaCallError, errorBytes);
+    }
+    else
+    {
+      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
+    }
+    return NULL;
+  }
+
+  PyObject* pyout = reasonable_box(out);
+
+  return pyout;
+}
+
+
+static PyMethodDef methods[] = {
+    {"jl_square", square_wrapper, METH_O, "Square function"},
     {"jl_eval", jl_eval_wrapper, METH_VARARGS, "eval julia function and return a python capsule"},
     {"setup_api", setup_api, METH_O, "setup JV class and init MyPyAPI/MyJLAPI"},
     {"jl_display", jl_display, METH_O, "display JV as string"},
+    {"jl_getattr", jl_getattr, METH_VARARGS, "get attr of JV object"},
     {NULL, NULL, 0, NULL}};
 
-static struct PyModuleDef example_module = {PyModuleDef_HEAD_INIT, "_tyjuliacall_jnumpy",
-                                            NULL, -1, example_methods};
+static struct PyModuleDef juliacall_module = {PyModuleDef_HEAD_INIT, "_tyjuliacall_jnumpy",
+                                            NULL, -1, methods};
 
 DLLEXPORT PyObject *init_PyModule(void)
 {
-  name_slot = PyUnicode_FromString("__jlslot__");
+  name_jlslot = PyUnicode_FromString("__jlslot__");
   JuliaCallError = PyErr_NewException("_tyjuliacall_jnumpy.error", NULL, NULL);
-  return PyModule_Create(&example_module);
+  PyObject* m = PyModule_Create(&juliacall_module);
+  PyObject* sys = PyImport_ImportModule("sys");
+  PyObject* sys_module = PyObject_GetAttrString(sys, "modules");
+  Py_IncRef(m);
+  PyDict_SetItemString(sys_module, "_tyjuliacall_jnumpy", m);
+  Py_DecRef(sys_module);
+  Py_DECREF(sys);
+  return m;
 }
