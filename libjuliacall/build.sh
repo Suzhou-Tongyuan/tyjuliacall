@@ -17,6 +17,6 @@ lib_dir=$(dirname "$libpython_files")
 echo "lib_dir: $lib_dir"
 echo "include_dir: $include_dir"
 
-g++ -fPIC -shared juliacall.cpp -o libjuliacall.dll -I./include -I$include_dir -L$lib_dir -lpython3
+g++ -fPIC -shared juliacall.cpp -o libjuliacall.dll -I. -I./include -I$include_dir -L$lib_dir -lpython3
 cp libjuliacall.dll ../tyjuliasetup/src/libjuliacall.dll
 

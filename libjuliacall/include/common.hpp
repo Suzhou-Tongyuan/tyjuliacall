@@ -5,6 +5,25 @@
 #include <Python.h>
 #include <tyjuliacapi.hpp>
 
+static PyObject *JuliaCallError;
+static PyObject *name_jlslot;
+static JSym errorSym;
+
+PyObject* HandleJLErrorAndReturnNULL()
+{
+    char errorBytes[2048] = {(char)0};
+    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
+    {
+      PyErr_SetString(JuliaCallError, errorBytes);
+    }
+    else
+    {
+      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
+    }
+    return NULL;
+}
+
+
 struct t_PyAPI
 {
     PyObject* m_builtin;
@@ -80,11 +99,6 @@ static const JV JV_NULL = 0;
 
 static t_PyAPI MyPyAPI;
 static t_JLAPI MyJLAPI;
-static PyObject *JuliaCallError;
-static PyObject *JVType;
-static PyObject *name_jlslot;
-static JSym errorSym;
-
 
 
 static void init_JLAPI()
@@ -124,16 +138,16 @@ static void init_JLAPI()
     JLEval(&MyJLAPI.f_truediv, NULL, "Base.:/");
     JLEval(&MyJLAPI.f_floordiv, NULL, "Base.div");
     JLEval(&MyJLAPI.f_mod, NULL, "Base.mod");
-    JLEval(&MyJLAPI.f_pow, NULL, "Base.pow");
+    JLEval(&MyJLAPI.f_pow, NULL, "Base.:^");
     JLEval(&MyJLAPI.f_lshift, NULL, "Base.:<<");
     JLEval(&MyJLAPI.f_rshift, NULL, "Base.:>>");
     JLEval(&MyJLAPI.f_bitor, NULL, "Base.:|");
     JLEval(&MyJLAPI.f_bitxor, NULL, "Base.:⊻");
     JLEval(&MyJLAPI.f_bitand, NULL, "Base.:&");
-    JLEval(&MyJLAPI.f_eq, NULL, "Base.:==");
-    JLEval(&MyJLAPI.f_ne, NULL, "Base.:!=");
-    JLEval(&MyJLAPI.f_le, NULL, "Base.:<=");
-    JLEval(&MyJLAPI.f_ge, NULL, "Base.:>=");
+    JLEval(&MyJLAPI.f_eq, NULL, "Base.:(==)");
+    JLEval(&MyJLAPI.f_ne, NULL, "Base.:(!=)");
+    JLEval(&MyJLAPI.f_le, NULL, "Base.:(<=)");
+    JLEval(&MyJLAPI.f_ge, NULL, "Base.:(>=)");
     JLEval(&MyJLAPI.f_lt, NULL, "Base.:<");
     JLEval(&MyJLAPI.f_gt, NULL, "Base.:>");
     JLEval(&MyJLAPI.f_abs, NULL, "Base.abs");

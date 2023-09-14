@@ -25,47 +25,6 @@ DLLEXPORT int init_libjuliacall(void *lpfnJLCApiGetter, void *lpfnPyCast2JL, voi
   return 0;
 }
 
-static PyObject *square_wrapper(PyObject *self, PyObject *args)
-{
-  JV v = reasonable_unbox(args);
-
-  JV jret;
-  JV arguments[1];
-  arguments[0] = v;
-  JLCall(&jret, MyJLAPI.f_square, SList_adapt(&arguments[0], 1), emptyKwArgs());
-
-  PyObject* py = reasonable_box(jret);
-  JLFreeFromMe(jret);
-  return py;
-}
-
-
-static PyObject *jl_eval_wrapper(PyObject *self, PyObject *args)
-{
-  const char *_command;
-  JV result;
-  if (!PyArg_ParseTuple(args, "s", &_command))
-  {
-    return NULL;
-  }
-  char *command = const_cast<char *>(_command);
-  ErrorCode ret = JLEval(&result, NULL, SList_adapt(reinterpret_cast<uint8_t *>(command), strlen(command)));
-  if (ret != ErrorCode::ok)
-  {
-    char errorBytes[2048] = {(char)0};
-    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
-    {
-      PyErr_SetString(JuliaCallError, errorBytes);
-    }
-    else
-    {
-      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
-    }
-    return NULL;
-  }
-  return box_julia(result);
-}
-
 static PyObject *setup_api(PyObject *self, PyObject *arg)
 {
   // check arg type
@@ -86,6 +45,39 @@ static PyObject *setup_api(PyObject *self, PyObject *arg)
   return Py_None;
 }
 
+static PyObject *jl_eval(PyObject *self, PyObject *args)
+{
+  const char *_command;
+  JV result;
+  if (!PyArg_ParseTuple(args, "s", &_command))
+  {
+    return NULL;
+  }
+  char *command = const_cast<char *>(_command);
+  ErrorCode ret = JLEval(&result, NULL, SList_adapt(reinterpret_cast<uint8_t *>(command), strlen(command)));
+  if (ret != ErrorCode::ok)
+  {
+    return HandleJLErrorAndReturnNULL();
+  }
+  return box_julia(result);
+}
+
+static PyObject *jl_square(PyObject *self, PyObject *args)
+{
+  JV v = reasonable_unbox(args);
+
+  JV jret;
+  ErrorCode ret = JLCall(&jret, MyJLAPI.f_square, SList_adapt(&v, 1), emptyKwArgs());
+  if (ret != ErrorCode::ok)
+  {
+    return HandleJLErrorAndReturnNULL();
+  }
+
+  PyObject* py = reasonable_box(jret);
+  JLFreeFromMe(jret);
+  return py;
+}
+
 static PyObject *jl_display(PyObject *self, PyObject *arg)
 {
   // check arg type
@@ -103,17 +95,7 @@ static PyObject *jl_display(PyObject *self, PyObject *arg)
   ErrorCode ret = JLCall(&jret, MyJLAPI.f_repr, SList_adapt(&jv, 1), emptyKwArgs());
   if (ret != ErrorCode::ok)
   {
-    // TODO: better error handle
-    char errorBytes[2048] = {(char)0};
-    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
-    {
-      PyErr_SetString(JuliaCallError, errorBytes);
-    }
-    else
-    {
-      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
-    }
-    return NULL;
+    return HandleJLErrorAndReturnNULL();
   }
 
   // convert Julia's String to Python's str.
@@ -122,7 +104,7 @@ static PyObject *jl_display(PyObject *self, PyObject *arg)
   // but this one is simple.
   PyObject* pyjv = pycast2py(jret);
 
-  // don't need this, free it
+  // free it
   JLFreeFromMe(jret);
   return pyjv;
 }
@@ -155,28 +137,18 @@ static PyObject *jl_getattr(PyObject *self, PyObject *args)
   ErrorCode ret = JLGetProperty(&out, slf, sym);
   if (ret != ErrorCode::ok)
   {
-    // TODO: better error handle
-    char errorBytes[2048] = {(char)0};
-    if (ErrorCode::ok == JLError_FetchMsgStr(&errorSym, SList_adapt(reinterpret_cast<uint8_t *>(errorBytes), sizeof(errorBytes))))
-    {
-      PyErr_SetString(JuliaCallError, errorBytes);
-    }
-    else
-    {
-      PyErr_SetString(JuliaCallError, "juliacall: unknown error");
-    }
-    return NULL;
+    return HandleJLErrorAndReturnNULL();
   }
 
   PyObject* pyout = reasonable_box(out);
-
+  // JLFreeFromMe(out);
   return pyout;
 }
 
 
 static PyMethodDef methods[] = {
-    {"jl_square", square_wrapper, METH_O, "Square function"},
-    {"jl_eval", jl_eval_wrapper, METH_VARARGS, "eval julia function and return a python capsule"},
+    {"jl_square", jl_square, METH_O, "Square function"},
+    {"jl_eval", jl_eval, METH_VARARGS, "eval julia function and return a python capsule"},
     {"setup_api", setup_api, METH_O, "setup JV class and init MyPyAPI/MyJLAPI"},
     {"jl_display", jl_display, METH_O, "display JV as string"},
     {"jl_getattr", jl_getattr, METH_VARARGS, "get attr of JV object"},
