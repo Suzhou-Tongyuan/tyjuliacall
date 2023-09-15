@@ -16,7 +16,7 @@ DLLEXPORT int init_libjuliacall(void *lpfnJLCApiGetter, void *lpfnPyCast2JL, voi
   if (library_init((_get_capi_t)(lpfnJLCApiGetter)) == 0)
   {
     printf("library_init failed: TyJuliaCAPI is invalid\n");
-    return 1;
+    return 1; 
   }
 
   pycast2jl = (t_pycast2jl)lpfnPyCast2JL;
