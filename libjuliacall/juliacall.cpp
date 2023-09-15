@@ -36,9 +36,9 @@ static PyObject *setup_api(PyObject *self, PyObject *arg)
 
   if (MyPyAPI.t_JV == NULL)
   {
-    Py_IncRef(arg);
+    Py_IncRef(arg); //Py_IncRef 函数用于增加 Python 对象的引用计数。
     init_JLAPI();
-    init_PyAPI(arg);
+    init_PyAPI(arg);//自定义函数或库初始化函数的调用。
   }
 
   Py_INCREF(Py_None);
@@ -53,11 +53,11 @@ static PyObject *jl_eval(PyObject *self, PyObject *args)
   {
     return NULL;
   }
-  char *command = const_cast<char *>(_command);
-  ErrorCode ret = JLEval(&result, NULL, SList_adapt(reinterpret_cast<uint8_t *>(command), strlen(command)));
+  char *command = const_cast<char *>(_command); //const_cast 用于将一个指向常量数据的指针转换为指向非常量数据的指针。
+  ErrorCode ret = JLEval(&result, NULL, SList_adapt(reinterpret_cast<uint8_t *>(command), strlen(command)));//这段代码调用了一个自定义函数 JLEval，并将 command 的数据以某种方式传递给它，然后将结果存储在 result 中。
   if (ret != ErrorCode::ok)
   {
-    return HandleJLErrorAndReturnNULL();
+    return HandleJLErrorAndReturnNULL();//如果是错误的话，则处理
   }
   return box_julia(result);
 }
@@ -73,7 +73,7 @@ static PyObject *jl_square(PyObject *self, PyObject *args)
     return HandleJLErrorAndReturnNULL();
   }
 
-  PyObject* py = reasonable_box(jret);
+  )PyObject* py = reasonable_box(jret;//jret变成python类型
   JLFreeFromMe(jret);
   return py;
 }
@@ -150,13 +150,38 @@ static PyObject *jl_getattr(PyObject *self, PyObject *args)
 
 static PyObject *jl_setattr(PyObject *self, PyObject *args)
 {
+  // jl_setattr(self: JV, attr: str, value)
   // 1. check args type, we should get 3 args: PyObject* pyjv, const char* attr, PyObject* value
+  PyObject* pyjv;
+  PyObject* value;
+  const char* attr;
+  if (!PyArg_ParseTuple(args, "OsO", &pyjv, &attr,&value))
+  {
+    return NULL;
+  }
   // 2. check pyjv is a JV object, and unbox it as JV
+  JV slf;
+  if (!PyObject_IsInstance(pyjv, MyPyAPI.t_JV))
+  {
+    PyErr_SetString(JuliaCallError, "jl_getattr: expect object of JV class.");
+    return NULL;
+  }
+  else
+  {
+    slf = unbox_julia(pyjv);
+  }
   // 3. unbox value as JV
+  JV v = reasonable_unbox(value);
   // 4. call JLSetProperty
+  JSym sym;
+  JSymFromString(&sym, attr);
+  ErrorCode ret = JLSetProperty(slf,sym,v);
   // 5. check if error occurs, if so, handle it and return NULL
+   if (ret != ErrorCode::ok)
+  {
+    return HandleJLErrorAndReturnNULL();
+  }
   // 6. if success, return Py_None
-
   Py_INCREF(Py_None);
   return Py_None;
 }
