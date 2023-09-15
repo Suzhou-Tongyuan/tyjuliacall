@@ -104,14 +104,13 @@ static PyObject *jl_display(PyObject *self, PyObject *arg)
   // but this one is simple.
   PyObject* pyjv = pycast2py(jret);
 
-  // free it
+  // free this Julia String
   JLFreeFromMe(jret);
   return pyjv;
 }
 
 static PyObject *jl_getattr(PyObject *self, PyObject *args)
 {
-  // TODO
   PyObject* pyjv;
   const char* attr;
   if (!PyArg_ParseTuple(args, "Os", &pyjv, &attr))
@@ -141,17 +140,35 @@ static PyObject *jl_getattr(PyObject *self, PyObject *args)
   }
 
   PyObject* pyout = reasonable_box(out);
-  // JLFreeFromMe(out);
+  if (!PyObject_IsInstance(pyout, MyPyAPI.t_JV))
+  {
+    // if pyout is a JV object, we should not free it from Julia.
+    JLFreeFromMe(out);
+  }
   return pyout;
+}
+
+static PyObject *jl_setattr(PyObject *self, PyObject *args)
+{
+  // 1. check args type, we should get 3 args: PyObject* pyjv, const char* attr, PyObject* value
+  // 2. check pyjv is a JV object, and unbox it as JV
+  // 3. unbox value as JV
+  // 4. call JLSetProperty
+  // 5. check if error occurs, if so, handle it and return NULL
+  // 6. if success, return Py_None
+
+  Py_INCREF(Py_None);
+  return Py_None;
 }
 
 
 static PyMethodDef methods[] = {
+    {"setup_api", setup_api, METH_O, "setup JV class and init MyPyAPI/MyJLAPI"},
     {"jl_square", jl_square, METH_O, "Square function"},
     {"jl_eval", jl_eval, METH_VARARGS, "eval julia function and return a python capsule"},
-    {"setup_api", setup_api, METH_O, "setup JV class and init MyPyAPI/MyJLAPI"},
     {"jl_display", jl_display, METH_O, "display JV as string"},
     {"jl_getattr", jl_getattr, METH_VARARGS, "get attr of JV object"},
+    {"jl_setattr", jl_setattr, METH_VARARGS, "set attr of JV object"},
     {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef juliacall_module = {PyModuleDef_HEAD_INIT, "_tyjuliacall_jnumpy",
