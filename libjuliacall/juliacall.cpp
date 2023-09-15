@@ -181,7 +181,12 @@ static PyObject *jl_setattr(PyObject *self, PyObject *args)
   {
     return HandleJLErrorAndReturnNULL();
   }
-  JLFreeFromMe(v);
+
+ if (!PyObject_IsInstance(value, MyPyAPI.t_JV))
+  {
+    // if pyout is a JV object, we should not free it from Julia.
+    JLFreeFromMe(v);
+  }
   // 6. if success, return Py_None
   Py_INCREF(Py_None);
   return Py_None;
