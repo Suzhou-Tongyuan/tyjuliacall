@@ -193,6 +193,202 @@ static PyObject *jl_setattr(PyObject *self, PyObject *args)
 }
 
 
+static PyObject *jl_arithmetic_operation(PyObject *self, PyObject *args, JV f)
+{
+  //1. check args type
+  PyObject* pyjv;
+  PyObject* value;
+  if (!PyArg_ParseTuple(args, "OO", &pyjv, &value))
+  {
+    return NULL;
+  }
+  // 2. check pyjv is a JV object, and unbox it as JV
+  JV slf;
+  if (!PyObject_IsInstance(pyjv, MyPyAPI.t_JV))
+  {
+    PyErr_SetString(JuliaCallError, "jl_add: expect object of JV class.");
+    return NULL;
+  }
+  else
+  {
+    slf = unbox_julia(pyjv);
+  }
+  // 3. unbox value as JV
+  JV v = reasonable_unbox(value);
+  // 4. call JLCallS
+  JV jret;
+  JV jargs[2];
+  jargs[0] = slf;
+  jargs[1] = v;
+
+  ErrorCode ret;
+  ret = JLCall(&jret, f, SList_adapt(jargs, 2), emptyKwArgs());
+  // 5. check if error occurs, if so, handle it and return NULL 
+  if (ret != ErrorCode::ok)
+  {
+    return HandleJLErrorAndReturnNULL();
+  }
+
+  if (!PyObject_IsInstance(value, MyPyAPI.t_JV))
+  {
+    // if pyout is a JV object, we should not free it from Julia.
+    JLFreeFromMe(v);
+  }
+  PyObject* py = reasonable_box(jret);
+  JLFreeFromMe(jret);
+  return py;
+}
+
+static PyObject *jl_add(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_add);
+}
+
+static PyObject *jl_sub(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_sub);
+}
+
+static PyObject *jl_mul(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_mul);
+}
+
+static PyObject *jl_matmul(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_matmul);
+}
+
+static PyObject *jl_truediv(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_truediv);
+}
+
+static PyObject *jl_floordiv(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_floordiv);
+}
+
+static PyObject *jl_mod(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_mod);
+}
+
+static PyObject *jl_pow(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_pow);
+}
+
+static PyObject *jl_lshift(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_lshift);
+}
+
+static PyObject *jl_rshift(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_rshift);
+}
+
+static PyObject *jl_bitor(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_bitor);
+}
+
+static PyObject *jl_bitxor(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_bitxor);
+}
+
+static PyObject *jl_bitand(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_bitand);
+}
+
+static PyObject *jl_eq(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_eq);
+}
+
+static PyObject *jl_ne(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_ne);
+}
+
+static PyObject *jl_lt(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_lt);
+}
+
+static PyObject *jl_le(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_le);
+}
+
+static PyObject *jl_gt(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_gt);
+}
+
+static PyObject *jl_ge(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_ge);
+}
+
+static PyObject *jl_contains(PyObject *self, PyObject *args)
+{
+    return jl_arithmetic_operation(self, args, MyJLAPI.f_in);
+}
+
+
+static PyObject *jl_unary_opertation(PyObject *self, PyObject *args, JV f)
+{
+  //1. check args type
+  PyObject* pyjv;
+  // 2. check pyjv is a JV object, and unbox it as JV
+  JV slf;
+  if (!PyObject_IsInstance(pyjv, MyPyAPI.t_JV))
+  {
+    PyErr_SetString(JuliaCallError, "jl_add: expect object of JV class.");
+    return NULL;
+  }
+  else
+  {
+    slf = unbox_julia(pyjv);
+  }
+  // 3. call JLCallS
+  JV jret;
+  ErrorCode ret;
+  ret = JLCall(&jret, f, SList_adapt(&slf, 1), emptyKwArgs());
+  // 4. check if error occurs, if so, handle it and return NULL 
+  if (ret != ErrorCode::ok)
+  {
+    return HandleJLErrorAndReturnNULL();
+  }
+  PyObject* py = reasonable_box(jret);
+  JLFreeFromMe(jret);
+  return py;
+}
+
+static PyObject *jl_invert(PyObject *self, PyObject *args)
+{
+    return jl_unary_opertation(self, args, MyJLAPI.f_invert);
+}
+
+static PyObject *jl_pos(PyObject *self, PyObject *args)
+{
+    return jl_unary_opertation(self, args, MyJLAPI.f_add);
+}
+
+static PyObject *jl_neg(PyObject *self, PyObject *args)
+{
+    return jl_unary_opertation(self, args, MyJLAPI.f_sub);
+}
+
+static PyObject *jl_abs(PyObject *self, PyObject *args)
+{
+    return jl_unary_opertation(self, args, MyJLAPI.f_abs);
+}
+
 static PyMethodDef methods[] = {
     {"setup_api", setup_api, METH_O, "setup JV class and init MyPyAPI/MyJLAPI"},
     {"jl_square", jl_square, METH_O, "Square function"},
@@ -200,7 +396,31 @@ static PyMethodDef methods[] = {
     {"jl_display", jl_display, METH_O, "display JV as string"},
     {"jl_getattr", jl_getattr, METH_VARARGS, "get attr of JV object"},
     {"jl_setattr", jl_setattr, METH_VARARGS, "set attr of JV object"},
-    {NULL, NULL, 0, NULL}};
+    {"jl_add",jl_add,METH_VARARGS, "add function" },
+    {"jl_sub",jl_sub,METH_VARARGS, "sub function" },
+    {"jl_mul",jl_mul,METH_VARARGS, "mul function" },
+    {"jl_matmul",jl_matmul,METH_VARARGS, "matmul function" },
+    {"jl_truediv",jl_truediv,METH_VARARGS, "truediv function" },
+    {"jl_floordiv",jl_floordiv,METH_VARARGS, "floordiv function" },
+    {"jl_mod",jl_mod,METH_VARARGS, "mod function" },
+    {"jl_pow",jl_pow,METH_VARARGS, "pow function" },
+    {"jl_lshift",jl_lshift,METH_VARARGS, "lshift function" },
+    {"jl_rshift",jl_rshift,METH_VARARGS, "rshift function" },
+    {"jl_bitor",jl_bitor,METH_VARARGS, "bitor function" },
+    {"jl_bitxor",jl_bitxor,METH_VARARGS, "bitxor function" },
+    {"jl_bitand",jl_bitand,METH_VARARGS, "bitand function" },
+    {"jl_eq",jl_eq,METH_VARARGS, "eq function" },
+    {"jl_ne",jl_ne,METH_VARARGS, "ne function" },
+    {"jl_lt",jl_lt,METH_VARARGS, "lt function" },
+    {"jl_le",jl_le,METH_VARARGS, "le function" },
+    {"jl_gt",jl_gt,METH_VARARGS, "gt function" },
+    {"jl_ge",jl_ge,METH_VARARGS, "ge function" },
+    {"jl_contains",jl_contains,METH_VARARGS, "contains function" }, 
+    {"jl_invert",jl_invert,METH_O, "invert function" },
+    {"jl_pos",jl_pos,METH_O, "pos function" },
+    {"jl_neg",jl_neg,METH_O, "neg function" },
+    {"jl_abs",jl_abs,METH_O, "abs function" },
+    {NULL, NULL, 0, NULL}}; 
 
 static struct PyModuleDef juliacall_module = {PyModuleDef_HEAD_INIT, "_tyjuliacall_jnumpy",
                                             NULL, -1, methods};
