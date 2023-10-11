@@ -35,6 +35,7 @@ jobs:
       run: |
         pip install .
         pip install pytest coverage
+        julia -e "import Pkg; Pkg.add(\"TyPython\")"
         coverage run --source=tyjuliasetup -m pytest -s && coverage report && coverage xml
     - name: Python Cov
       uses: codecov/codecov-action@v2
