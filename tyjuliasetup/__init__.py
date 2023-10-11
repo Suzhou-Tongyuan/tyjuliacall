@@ -288,8 +288,8 @@ def get_sysimage_and_projdir(jl_exe: str):
             raise ValueError("Julia.exe failed")
         sys_image, global_proj_dir = res.strip().decode("utf-8").splitlines()
 
-    sys_image = sys_image.strip()
-    global_proj_dir = global_proj_dir.strip()
+    sys_image = pathlib.Path(sys_image.strip()).absolute().as_posix()
+    global_proj_dir = pathlib.Path(global_proj_dir.strip()).absolute().as_posix()
     return sys_image, global_proj_dir
 
 def setup():
