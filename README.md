@@ -17,12 +17,13 @@ Features:
 
 ## Installation
 
-Prerequisites: Python (>=3.7)
+Prerequisites: Python (>=3.7), Julia (>=1.6)
 
-Then install the `tyjuliacall` Python package.
+Then install the `tyjuliacall` Python package and `TyPython` Julia package.
 
 ```bash
 pip install -U tyjuliacall
+julia -e "import Pkg; Pkg.add(\"TyPython\")"
 ```
 
 ## Using System Images
