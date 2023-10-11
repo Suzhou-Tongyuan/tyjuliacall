@@ -11,7 +11,9 @@ import sys
 import pathlib
 import typing
 import jnumpy
+from jnumpy.init import JuliaError
 import shlex
+import textwrap
 from types import ModuleType
 
 PYTHONPATH = pathlib.Path(sys.executable).resolve().as_posix()
@@ -242,33 +244,68 @@ class _JuliaCodeEvaluatorClass:
 JuliaEvaluator = _JuliaCodeEvaluatorClass()
 
 
-def setup():
-    global BASE_IMAGE
-    jl_exe = shutil.which("julia")
-    if not jl_exe:
-        raise RuntimeError("Julia not found")
+def _exec_julia(x):
+    global _eval_jl
+    try:
+        _eval_jl(x)  # type: ignore
+    except NameError:
+        raise RuntimeError(
+            "name '_eval_jl' is not defined, should call tyjuliasetup.setup() first."
+        )
 
-    # sync PyCall and PythonCall
+code_template = r"""
+begin
+    {}
+end
+"""
+
+def get_sysimage_and_projdir(jl_exe: str):
     if Environment.TYPY_JL_SYSIMAGE:
-        BASE_IMAGE = Environment.TYPY_JL_SYSIMAGE
-    else:
-        sysimage = invoke_julia(
+        sys_image = Environment.TYPY_JL_SYSIMAGE
+        res = invoke_julia(
             jl_exe,
             [
                 "--compile=min",
                 "-O0",
                 "-e",
-                "println(unsafe_string(Base.JLOptions().image_file))",
+                "import Pkg; println(dirname(Pkg.project().path))",
             ],
         )
-        if not sysimage or not isinstance(sysimage, bytes) or not sysimage.strip():
+        if not res or not isinstance(res, bytes) or not res.strip():
             raise ValueError("Julia.exe failed")
-        BASE_IMAGE = sysimage.strip().decode("utf-8")
+        global_proj_dir = res.strip().decode("utf-8")
+    else:
+        res = invoke_julia(
+            jl_exe,
+            [
+                "--compile=min",
+                "-O0",
+                "-e",
+                "import Pkg; println(unsafe_string(Base.JLOptions().image_file)); println(dirname(Pkg.project().path))",
+            ],
+        )
+        if not res or not isinstance(res, bytes) or not res.strip():
+            raise ValueError("Julia.exe failed")
+        sys_image, global_proj_dir = res.strip().decode("utf-8").splitlines()
+
+    sys_image = sys_image.strip()
+    global_proj_dir = global_proj_dir.strip()
+    return sys_image, global_proj_dir
+
+def setup():
+    global BASE_IMAGE
+    global GLOBAL_PROJ_DIR
+    jl_exe = shutil.which("julia")
+    if not jl_exe:
+        raise RuntimeError("Julia not found")
+
+    # sync PyCall and PythonCall
+    BASE_IMAGE, GLOBAL_PROJ_DIR = get_sysimage_and_projdir(jl_exe)
 
     Environment.PYTHON = PYTHONPATH
     Environment.PYCALL_INPROC_LIBPYPTR = hex(ctypes.pythonapi._handle)
     Environment.PYCALL_INPROC_PROCID = str(os.getpid())
-    Environment.TYPY_JL_OPTS = shlex.join(["--sysimage", BASE_IMAGE])
+    Environment.TYPY_JL_OPTS = shlex.join(["--sysimage", BASE_IMAGE, f"--project={GLOBAL_PROJ_DIR}"])
     Environment.add_path(os.path.dirname(PYTHONPATH))
 
     # in case that users work with PythonCall
@@ -282,6 +319,20 @@ def setup():
     def _init(_lib):
         nonlocal lib
         lib = _lib
+        global _eval_jl
+
+        def _eval_jl(x: str):
+            source_code = code_template.format(x)
+            source_code_bytes = source_code.encode("utf8")
+            lib.jl_eval_string(source_code_bytes)
+
+            if lib.jl_exception_occurred():
+                lib.jl_exception_clear()
+                raise JuliaError("Julia exception occurred while calling julia code:\n{}".format(textwrap.indent(x, "    ")))
+            else:
+                lib.jl_exception_clear()
+            return None
+        return
 
     user_set_pyjulia_core = Environment.PYJULIA_CORE
     with tictoc("Julia initialized in {} seconds"):
@@ -296,9 +347,26 @@ def setup():
     pyjulia_core_provider = _get_pyjulia_core_provider()
     with tictoc("PyJulia-Core initialized in {} seconds"):
         if pyjulia_core_provider == "jnumpy":
-            jnumpy.init.init_jl_from_lib(lib)
-            jnumpy.init_project(__file__)
-            jnumpy.exec_julia("Pkg.activate(io=devnull)")
+            # import TyPython and init CPython in julia global env
+            try:
+                _exec_julia("import TyPython")
+            except JuliaError:
+                raise JuliaError("Failed to import Julia package TyPython, try to install TyPython in Julia.") from None
+
+            _exec_julia("TyPython.CPython.init()")
+
+            # init TyJuliaSetup
+            try:
+                TyJuliaSetup_path = (
+                    pathlib.Path(__file__).parent.absolute().joinpath("src").joinpath("TyJuliaSetup.jl").as_posix()
+                )
+                _exec_julia(
+                    f"""
+                    include({jnumpy.utils.escape_to_julia_rawstr(TyJuliaSetup_path)})
+                    TyJuliaSetup.init()
+                """)
+            except JuliaError:
+                raise JuliaError("Failed to init TyJuliaSetup.") from None
 
             import _tyjuliacall_jnumpy  # type: ignore
             from tyjuliasetup import jv
