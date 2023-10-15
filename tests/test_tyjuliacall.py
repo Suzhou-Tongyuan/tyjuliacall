@@ -80,6 +80,10 @@ def test_all():
     s2.y = 10
     assert JuliaEvaluator["s2.y == 10"]
 
+    jl_f = JuliaEvaluator["f(x,y;w=1,z=2) = x + y + w + z"]
+    assert jl_f(1, 2, w=3, z=4) == 10
+    assert jl_f(1, 2) == 6
+
     # 不支持传入规定以外的参数
     try:
         Base.identity([])
