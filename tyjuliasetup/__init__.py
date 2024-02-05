@@ -15,6 +15,7 @@ from jnumpy.init import JuliaError
 import shlex
 import textwrap
 from types import ModuleType
+from .julia_src_binding import JL_SRC
 
 PYTHONPATH = pathlib.Path(sys.executable).resolve().as_posix()
 _PYJULIA_CORE = None
@@ -244,10 +245,10 @@ class _JuliaCodeEvaluatorClass:
 JuliaEvaluator = _JuliaCodeEvaluatorClass()
 
 
-def _exec_julia(x):
+def _exec_julia(x, use_template=True):
     global _eval_jl
     try:
-        _eval_jl(x)  # type: ignore
+        _eval_jl(x, use_template)  # type: ignore
     except NameError:
         raise RuntimeError(
             "name '_eval_jl' is not defined, should call tyjuliasetup.setup() first."
@@ -321,8 +322,11 @@ def setup():
         lib = _lib
         global _eval_jl
 
-        def _eval_jl(x: str):
-            source_code = code_template.format(x)
+        def _eval_jl(x: str, use_template=True):
+            if use_template:
+                source_code = code_template.format(x)
+            else:
+                source_code = x
             source_code_bytes = source_code.encode("utf8")
             lib.jl_eval_string(source_code_bytes)
 
@@ -356,17 +360,16 @@ def setup():
             _exec_julia("TyPython.CPython.init()")
 
             # init TyJuliaSetup
-            try:
-                TyJuliaSetup_path = (
-                    pathlib.Path(__file__).parent.absolute().joinpath("src").joinpath("TyJuliaSetup.jl").as_posix()
-                )
-                _exec_julia(
-                    f"""
-                    include({jnumpy.utils.escape_to_julia_rawstr(TyJuliaSetup_path)})
-                    TyJuliaSetup.init()
-                """)
-            except JuliaError:
-                raise JuliaError("Failed to init TyJuliaSetup.") from None
+            with tictoc("TyJuliaSetup initialized in {} seconds"):
+                try:
+                    TyJuliaSetup_SRC = JL_SRC["TyJuliaSetup"]
+                    _exec_julia(
+                        f"""
+                        {TyJuliaSetup_SRC}
+                        TyJuliaSetup.init()
+                    """, use_template=False)
+                except JuliaError:
+                    raise JuliaError("Failed to init TyJuliaSetup.") from None
 
             import _tyjuliacall_jnumpy  # type: ignore
             from tyjuliasetup import jv
