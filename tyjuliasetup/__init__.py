@@ -158,7 +158,11 @@ class JuliaModule(ModuleType):
         self.__spec__ = None
 
     def __getattr__(self, name):
-        return getattr(self.__it, name)
+        try:
+            att = getattr(self.__it, name)
+        except:
+            raise AttributeError(f"{self.__it} has no attribute {name}.") from None
+        return att
 
     def __dir__(self):
         return list(self._jlapi.Main.names(self.__it, all=True, imported=True))
