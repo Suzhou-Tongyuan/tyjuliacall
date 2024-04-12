@@ -39,6 +39,13 @@ mutable struct RequiredFromPythonAPIStruct
     bool::Py
     ndarray::Py
     complex::Py
+    npint32::Py
+    npint64::Py
+    npfloat64::Py
+    npfloat32::Py
+    npcomplex128::Py
+    npbool::Py
+    npstr::Py
     RequiredFromPythonAPIStruct() = new()
 end
 
@@ -158,6 +165,21 @@ function reasonable_unbox(py::Py)
     if is_type_exact(py, MyPyAPI.tuple)
         n = length(py)
         return Tuple(reasonable_unbox(py[py_cast(Py, i-1)]) for i in 1:n)
+    end
+    if is_type_exact(py, MyPyAPI.npint32) || is_type_exact(py, MyPyAPI.npint64)
+        return py_cast(Int, MyPyAPI.int(py))
+    end
+    if is_type_exact(py, MyPyAPI.npfloat64) || is_type_exact(py, MyPyAPI.npfloat32)
+        return py_cast(Int, MyPyAPI.float(py))
+    end
+    if is_type_exact(py, MyPyAPI.npcomplex128)
+        return py_cast(Int, MyPyAPI.complex(py))
+    end
+    if is_type_exact(py, MyPyAPI.npbool)
+        return py_cast(Int, MyPyAPI.bool(py))
+    end
+    if is_type_exact(py, MyPyAPI.npstr)
+        return py_cast(Int, MyPyAPI.str(py))
     end
     error("unbox failed: cannot convert a Python object (type: $(classof(py))) to julia value.")
 end
@@ -507,6 +529,14 @@ function init()
     MyPyAPI.object = builtins.object
     MyPyAPI.complex = builtins.complex
     MyPyAPI.ndarray = numpy.ndarray
+    MyPyAPI.npint32 = numpy.int32
+    MyPyAPI.npint64 = numpy.int64
+    MyPyAPI.npfloat64 = numpy.float64
+    MyPyAPI.npfloat32 = numpy.float32
+    MyPyAPI.npcomplex128 = numpy.complex128
+    MyPyAPI.npbool = numpy.bool_
+    MyPyAPI.npstr = numpy.str_
+
     @export_pymodule _tyjuliacall_jnumpy begin
         setup_jv = Pyfunc(setup_jv)
         setup_basics = Pyfunc(setup_basics)

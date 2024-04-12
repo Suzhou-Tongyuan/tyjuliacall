@@ -27,6 +27,22 @@ def test_all():
     assert JuliaEvaluator["x -> x isa Tuple{Int, String}"]((1, "2"))
     assert JuliaEvaluator["x -> x isa Nothing"](None)
 
+    # numpy's scalar type
+    a = np.asarray([1], dtype=np.int64)
+    assert JuliaEvaluator["x -> typeof(x) == Int"](a[0])
+    a = np.asarray([1], dtype=np.int32)
+    assert JuliaEvaluator["x -> typeof(x) == Int"](a[0])
+    a = np.asarray([1.0], dtype=np.float64)
+    assert JuliaEvaluator["x -> typeof(x) == Float64"](a[0])
+    a = np.asarray([1.0], dtype=np.float32)
+    assert JuliaEvaluator["x -> typeof(x) == Float64"](a[0])
+    a = np.asarray([True])
+    assert JuliaEvaluator["x -> typeof(x) == Bool"](a[0])
+    a = np.asarray([complex(1.0, 2.0)])
+    assert JuliaEvaluator["x -> typeof(x) == ComplexF64"](a[0])
+    a = np.asarray(["abc", "cde"])
+    assert JuliaEvaluator["x -> typeof(x) == String"](a[0])
+
     # Vector{String} 没有对应Python类型
     assert isinstance(JuliaEvaluator["String[]"], JV)
 
