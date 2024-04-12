@@ -170,16 +170,16 @@ function reasonable_unbox(py::Py)
         return py_cast(Int, MyPyAPI.int(py))
     end
     if is_type_exact(py, MyPyAPI.npfloat64) || is_type_exact(py, MyPyAPI.npfloat32)
-        return py_cast(Int, MyPyAPI.float(py))
+        return py_cast(Float64, MyPyAPI.float(py))
     end
     if is_type_exact(py, MyPyAPI.npcomplex128)
-        return py_cast(Int, MyPyAPI.complex(py))
+        return py_cast(ComplexF64, MyPyAPI.complex(py))
     end
     if is_type_exact(py, MyPyAPI.npbool)
-        return py_cast(Int, MyPyAPI.bool(py))
+        return py_cast(Bool, MyPyAPI.bool(py))
     end
     if is_type_exact(py, MyPyAPI.npstr)
-        return py_cast(Int, MyPyAPI.str(py))
+        return py_cast(String, MyPyAPI.str(py))
     end
     error("unbox failed: cannot convert a Python object (type: $(classof(py))) to julia value.")
 end
