@@ -1,7 +1,9 @@
 # this file is auto-generated from build.py
 JL_SRC = {}
 
-JL_SRC["TyJuliaSetup"] = r"""
+JL_SRC[
+    "TyJuliaSetup"
+] = r"""
 module TyJuliaSetup
 using TyPython
 using TyPython.CPython

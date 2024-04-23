@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import typing
 
 __jl_invoke__: typing.Callable[[JV, tuple, dict], typing.Any]

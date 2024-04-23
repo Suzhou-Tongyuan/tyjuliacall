@@ -13,7 +13,7 @@ def _setup_help():
     class Helper(object):
         def __init__(self):
             if isinstance(__builtins__, dict):
-                self.help = __builtins__['help']
+                self.help = __builtins__["help"]
             else:
                 self.help = __builtins__.help
 
@@ -26,7 +26,7 @@ def _setup_help():
                 return self.help(obj)
 
     if isinstance(__builtins__, dict):
-        __builtins__['help'] = Helper()
+        __builtins__["help"] = Helper()
     else:
         __builtins__.help = Helper()
 

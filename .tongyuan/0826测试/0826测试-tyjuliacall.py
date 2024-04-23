@@ -15,10 +15,10 @@ import tyjuliacall
 
 print(f"TyJuliaCall 启动Julia+自动环境切换和检查+初始化PyCall+初始化PythonCall: {get_timespan():.2f} s")
 
-from tyjuliacall import TySignalProcessing as sp
-from tyjuliacall import TyPlot as typ
 import numpy as np
 
+from tyjuliacall import TyPlot as typ
+from tyjuliacall import TySignalProcessing as sp
 
 print(f"TyJuliaCall 导入TySignalProcess, TyPlot和NumPy: {get_timespan():.2f} s")
 
