@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install isort black
+      - name: Install isort black and check
         run: |
           pip install isort==5.11.5 black==22.12.0
           isort --check .
