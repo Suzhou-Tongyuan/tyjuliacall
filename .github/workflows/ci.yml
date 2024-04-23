@@ -1,12 +1,12 @@
 name: CI
-on: [push, pull_request]
+on: [ push, pull_request ]
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        OS: [Ubuntu, macOS, Windows]
-        python-version: ["3.7"]
+        OS: [ Ubuntu, macOS, Windows ]
+        python-version: [ "3.7" ]
         include:
           - os: Ubuntu
             image: ubuntu-22.04
@@ -20,26 +20,30 @@ jobs:
         shell: bash
     steps:
 
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install Poetry
-      run: pip install poetry
+      - name: Install isort black
+        run: |
+          pip install isort==5.11.5 black==22.12.0
+          isort --check .
+          black --check . --force-exclude .tongyuan
 
-    - name: Test
-      run: |
-        pip install .
-        pip install pytest coverage
-        julia -e "import Pkg; Pkg.add(\"TyPython\")"
-        coverage run --source=tyjuliasetup -m pytest -s && coverage report && coverage xml
-    - name: Python Cov
-      uses: codecov/codecov-action@v2
-      with:
-        files: coverage.xml
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
+      - name: Test
+        run: |
+          pip install .
+          pip install pytest coverage
+          julia -e "import Pkg; Pkg.add(\"TyPython\")"
+          coverage run --source=tyjuliasetup -m pytest -s && coverage report && coverage xml
+
+      - name: Python Cov
+        uses: codecov/codecov-action@v2
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true

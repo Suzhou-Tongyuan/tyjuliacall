@@ -10,9 +10,10 @@ def test_all():
     use_sysimage(sysimage.decode("utf-8").strip())
 
     # test conversion
-    from tyjuliacall import JV, JuliaEvaluator, Base
-    from tyjuliasetup import _get_pyjulia_core_provider
     import numpy as np
+
+    from tyjuliacall import JV, Base, JuliaEvaluator
+    from tyjuliasetup import _get_pyjulia_core_provider
 
     xs = JuliaEvaluator["zs = String[]"]
     push_ = JuliaEvaluator["push!"]
