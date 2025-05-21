@@ -13,7 +13,9 @@ _t0 = time.time()
 
 import tyjuliacall
 
-print(f"TyJuliaCall 启动Julia+自动环境切换和检查+初始化PyCall+初始化PythonCall: {get_timespan():.2f} s")
+print(
+    f"TyJuliaCall 启动Julia+自动环境切换和检查+初始化PyCall+初始化PythonCall: {get_timespan():.2f} s"
+)
 
 import numpy as np
 

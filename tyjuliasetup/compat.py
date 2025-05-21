@@ -2,6 +2,7 @@
     https://github.com/python/cpython/blob/0d04b8d9e1953d2311f78b772f21c9e07fbcbb6d/Lib/shlex.py
 
 A lexical analyzer class for simple shell-like syntaxes."""
+
 # Module and documentation by Eric S. Raymond, 21 Dec 1998
 # Input stacking and error message cleanup added by ESR, March 2000
 # push_source() and pop_source() made explicit by ESR, January 2001.

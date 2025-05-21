@@ -320,7 +320,7 @@ def setup():
     else:
         max_retry = 5
     flag = False
-    for _ in range(0, max_retry-1):
+    for _ in range(0, max_retry - 1):
         try:
             BASE_IMAGE, GLOBAL_PROJ_DIR = get_sysimage_and_projdir(jl_exe)
             flag = True
