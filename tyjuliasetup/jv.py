@@ -109,6 +109,7 @@ class JV:
             jl_collect = _jl_collect  # type: ignore
         except NameError:
             from _tyjuliacall_jnumpy import Base  # type: ignore
+
             jl_collect = _jl_collect = Base.collect
         ret = jl_collect(self)
         if dtype is None:
