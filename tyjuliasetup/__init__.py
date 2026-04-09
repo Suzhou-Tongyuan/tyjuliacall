@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import importlib
 import io
 import os
 import pathlib
@@ -187,6 +188,11 @@ class JuliaFinder:
             return JuliaLoader
         return
 
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.startswith("tyjuliacall"):
+            return importlib.util.spec_from_loader(fullname, JuliaLoader())
+        return None
+
 
 class JuliaLoader:
     @classmethod
@@ -195,6 +201,19 @@ class JuliaLoader:
         m = JuliaModule(cls, name, _jl_using(fullnames))
         sys.modules[name] = m
         return m
+
+    def create_module(self, spec):
+        # 使用默认模块对象
+        return None
+
+    def exec_module(self, module):
+        # module.__name__ = fullname
+        fullnames = module.__name__.split(".")[1:]
+        # 动态生成 JuliaModule 对象并挂载到 sys.modules
+        jl_mod = JuliaModule(self, module.__name__, _jl_using(fullnames))
+        sys.modules[module.__name__] = jl_mod
+        # 更新 module 的 __dict__
+        module.__dict__.update(jl_mod.__dict__)
 
 
 def _jl_using(fullnames: tuple[str, ...]):
