@@ -1,6 +1,8 @@
 from __future__ import annotations
-import jnumpy
+
 import typing
+
+import jnumpy
 
 __jl_invoke__: typing.Callable[[JV, tuple, dict], typing.Any]
 __jl_getattr__: typing.Callable[[JV, str], typing.Any]
