@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import jnumpy
 import typing
 
 __jl_invoke__: typing.Callable[[JV, tuple, dict], typing.Any]
@@ -39,6 +39,7 @@ _jl_repr_pretty_: typing.Callable[[JV], str]
 
 class JV:
     __slots__ = ["__jlslot__"]
+    __array_priority__ = 1000
 
     def __call__(self, *args, **kwargs):
         return __jl_invoke__(self, args, kwargs)
@@ -96,6 +97,22 @@ class JV:
 
     def __eq__(self, other: typing.Any):
         return __jl_eq__(self, other)
+
+    def __req__(self, other: typing.Any):
+        return __jl_eq__(self, other)
+
+    def __array__(self, dtype=None):
+        global _jl_collect
+        try:
+            jl_collect = _jl_collect  # type: ignore
+        except NameError:
+            from _tyjuliacall_jnumpy import Base  # type: ignore
+            jl_collect = _jl_collect = Base.collect
+        ret = jl_collect(self)
+        if dtype is None:
+            return ret
+        else:
+            return jnumpy.asarray(ret, dtype=dtype)
 
     def __ne__(self, other: typing.Any):
         return __jl_ne__(self, other)
