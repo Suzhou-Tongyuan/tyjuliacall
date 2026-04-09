@@ -6,8 +6,8 @@ jobs:
     strategy:
       matrix:
         OS: [ Ubuntu, macOS, Windows ]
-        python-version: [ "3.7" ]
-        julia-version: [ "1.9" ]
+        python-version: [ "3.7", "3.11", "3.12" ]
+        julia-version: [ "1.9", "1.10" ]
         include:
           - os: Ubuntu
             image: ubuntu-22.04
