@@ -81,6 +81,7 @@ class ENV:
     PYCALL_INPROC_LIBPYPTR: str
     PYCALL_INPROC_PROCID: str
     TYPY_JL_SYSIMAGE: str
+    TYPY_JL_EXTRA_OPTS: str
     TYPY_JL_OPTS: str
     TYPY_VERBOSE: str
     PATH: str
@@ -325,9 +326,33 @@ def get_sysimage_and_projdir(jl_exe: str):
     return sys_image, global_proj_dir
 
 
+def _parse_julia_extra_options(options: str) -> list[str]:
+    try:
+        parsed_options = shlex.split(options)
+    except ValueError as exc:
+        raise ValueError("Invalid TYPY_JL_EXTRA_OPTS") from exc
+    if "--" in parsed_options:
+        raise ValueError("TYPY_JL_EXTRA_OPTS must not contain standalone '--'")
+    return parsed_options
+
+
+def _build_julia_options(
+    extra_options: list[str], base_image: str, global_proj_dir: str
+) -> str:
+    return shlex.join(
+        [
+            *extra_options,
+            "--sysimage",
+            base_image,
+            f"--project={global_proj_dir}",
+        ]
+    )
+
+
 def setup():
     global BASE_IMAGE
     global GLOBAL_PROJ_DIR
+    extra_julia_options = _parse_julia_extra_options(Environment.TYPY_JL_EXTRA_OPTS)
     jl_exe = shutil.which("julia")
     if not jl_exe:
         raise RuntimeError("Julia not found")
@@ -353,8 +378,10 @@ def setup():
     Environment.PYTHON = PYTHONPATH
     Environment.PYCALL_INPROC_LIBPYPTR = hex(ctypes.pythonapi._handle)
     Environment.PYCALL_INPROC_PROCID = str(os.getpid())
-    Environment.TYPY_JL_OPTS = shlex.join(
-        ["--sysimage", BASE_IMAGE, f"--project={GLOBAL_PROJ_DIR}"]
+    Environment.TYPY_JL_OPTS = _build_julia_options(
+        extra_julia_options,
+        BASE_IMAGE,
+        GLOBAL_PROJ_DIR,
     )
     Environment.add_path(os.path.dirname(PYTHONPATH))
 

@@ -1,6 +1,38 @@
+def test_julia_option_round_trip():
+    import shlex
+
+    from tyjuliasetup import _build_julia_options, _parse_julia_extra_options
+
+    extra_options = _parse_julia_extra_options(
+        shlex.join(["--quiet", "--custom=value with spaces"])
+    )
+    options = _build_julia_options(
+        extra_options,
+        "C:/Julia images/custom image.dll",
+        "C:/Julia environments/default project",
+    )
+
+    assert shlex.split(options) == [
+        "--quiet",
+        "--custom=value with spaces",
+        "--sysimage",
+        "C:/Julia images/custom image.dll",
+        "--project=C:/Julia environments/default project",
+    ]
+
+    try:
+        _parse_julia_extra_options("--quiet --")
+    except ValueError as exc:
+        assert "standalone '--'" in str(exc)
+    else:
+        raise AssertionError("standalone '--' must be rejected")
+
+
 def test_all():
     # test_invoke
-    from tyjuliasetup import invoke_julia, use_sysimage
+    import shlex
+
+    from tyjuliasetup import Environment, invoke_julia, use_sysimage
 
     invoke_julia("julia", ["-e", 'error("a")'], supress_errors=False)
     sysimage = invoke_julia(
@@ -8,12 +40,21 @@ def test_all():
     )
     assert sysimage
     use_sysimage(sysimage.decode("utf-8").strip())
+    Environment.TYPY_JL_EXTRA_OPTS = shlex.join(["--quiet"])
 
     # test conversion
     import numpy as np
 
     from tyjuliacall import JV, Base, JuliaEvaluator
     from tyjuliasetup import _get_pyjulia_core_provider
+
+    julia_options = shlex.split(Environment.TYPY_JL_OPTS)
+    assert shlex.split(Environment.TYPY_JL_EXTRA_OPTS) == ["--quiet"]
+    assert julia_options.count("--quiet") == 1
+    assert julia_options[-3] == "--sysimage"
+    assert julia_options[-2] == Environment.TYPY_JL_SYSIMAGE
+    assert julia_options[-1].startswith("--project=")
+    assert Base.JLOptions().quiet != 0
 
     xs = JuliaEvaluator["zs = String[]"]
     push_ = JuliaEvaluator["push!"]
@@ -151,10 +192,10 @@ def test_all():
     assert (~missing) == JuliaEvaluator["~missing"]
 
     # test miscellaneous
-    from tyjuliasetup import Environment
-
     Environment._env = None
+    Environment.TYPY_JL_EXTRA_OPTS = ""
     Environment.TYPY_JL_OPTS = ""
+
     import os
 
     os.environ["TYPY_JL_OPTS"] = ""
