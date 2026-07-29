@@ -26,6 +26,32 @@ pip install -U tyjuliacall
 julia -e "import Pkg; Pkg.add(\"TyPython\")"
 ```
 
+## Julia Initialization Options
+
+Set `TYPY_JL_EXTRA_OPTS` before the first import of `tyjuliacall` to pass
+additional initialization options to Julia:
+
+```python
+import os
+
+os.environ["TYPY_JL_EXTRA_OPTS"] = "--quiet"
+
+from tyjuliacall import Base
+```
+
+The value is parsed with `shlex.split`, combined with TyJuliaCall's required
+options, and passed to `libjulia` through its existing `jl_parse_opts` path.
+TyJuliaCall reserves `--sysimage` (`-J`) and `--project`; configure a custom
+system image with `use_sysimage()` instead. `TYPY_JL_OPTS` is an internal
+transport variable and should not be set directly.
+
+This mechanism is for options handled during `libjulia` initialization. Julia
+driver actions such as `-e`, `-L`, and script arguments do not execute because
+an embedded Julia instance does not run the command-line driver's `_start()`.
+The standalone `--` separator is not supported. Invalid or process-exiting
+options are handled by Julia itself and can make the Python import fail or
+terminate.
+
 ## Using System Images
 
 ```python

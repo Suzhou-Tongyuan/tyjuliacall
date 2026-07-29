@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tyjuliacall"
-version = "0.7.6"
+version = "0.7.7"
 description = "Python-Julia interops."
 authors = ["Suzhou-Tongyuan <support@tongyuan.cc>"]
 packages = [
