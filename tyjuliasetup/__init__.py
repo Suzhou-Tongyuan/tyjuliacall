@@ -31,11 +31,7 @@ _JULIA_ATEXIT_REGISTERED = False
 del compat
 
 
-def shutdown():
-    """Shut down the embedded Julia runtime.
-
-    Julia cannot be used again in this process after this function is called.
-    """
+def _shutdown_julia():
     global _LIBJULIA
     global _JULIA_SHUTDOWN
 
@@ -61,7 +57,7 @@ def _register_julia_shutdown(lib):
     lib.jl_atexit_hook.restype = None
 
     if not _JULIA_ATEXIT_REGISTERED:
-        atexit.register(shutdown)
+        atexit.register(_shutdown_julia)
         _JULIA_ATEXIT_REGISTERED = True
 
 

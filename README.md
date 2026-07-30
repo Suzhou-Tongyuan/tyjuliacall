@@ -57,19 +57,6 @@ terminate.
 TyJuliaCall shuts down the embedded Julia runtime when Python exits normally.
 This runs Julia `atexit` hooks and pending finalizers.
 
-Call `shutdown()` explicitly when deterministic cleanup is required:
-
-```python
-from tyjuliacall import shutdown
-
-try:
-    # Use Julia here.
-    ...
-finally:
-    shutdown()
-```
-
-Julia cannot be used again in the same process after `shutdown()` is called.
 Forced process termination, including `os._exit()`, does not run exit hooks.
 
 ## Using System Images

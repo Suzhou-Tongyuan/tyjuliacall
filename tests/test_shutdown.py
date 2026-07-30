@@ -29,12 +29,12 @@ def test_registers_shutdown_and_calls_julia_atexit_once(monkeypatch):
 
     tyjuliasetup._register_julia_shutdown(lib)
 
-    assert registered == [tyjuliasetup.shutdown]
+    assert registered == [tyjuliasetup._shutdown_julia]
     assert lib.jl_atexit_hook.argtypes == [ctypes.c_int]
     assert lib.jl_atexit_hook.restype is None
 
-    tyjuliasetup.shutdown()
-    tyjuliasetup.shutdown()
+    tyjuliasetup._shutdown_julia()
+    tyjuliasetup._shutdown_julia()
 
     assert lib.jl_atexit_hook.calls == [0]
     assert tyjuliasetup._LIBJULIA is None
@@ -51,4 +51,4 @@ def test_registers_python_atexit_only_once(monkeypatch):
     tyjuliasetup._register_julia_shutdown(FakeLibJulia())
     tyjuliasetup._register_julia_shutdown(FakeLibJulia())
 
-    assert registered == [tyjuliasetup.shutdown]
+    assert registered == [tyjuliasetup._shutdown_julia]
