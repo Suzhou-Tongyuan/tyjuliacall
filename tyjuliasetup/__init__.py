@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import contextlib
 import ctypes
 import importlib
@@ -23,8 +24,45 @@ from .julia_src_binding import JL_SRC
 
 PYTHONPATH = pathlib.Path(sys.executable).resolve().as_posix()
 _PYJULIA_CORE = None
+_LIBJULIA: typing.Any = None
+_JULIA_SHUTDOWN = False
+_JULIA_ATEXIT_REGISTERED = False
 
 del compat
+
+
+def shutdown():
+    """Shut down the embedded Julia runtime.
+
+    Julia cannot be used again in this process after this function is called.
+    """
+    global _LIBJULIA
+    global _JULIA_SHUTDOWN
+
+    lib = _LIBJULIA
+    if lib is None or _JULIA_SHUTDOWN:
+        return
+
+    # Set the guard before entering Julia because Julia exit hooks may re-enter
+    # Python and attempt to shut the runtime down again.
+    _JULIA_SHUTDOWN = True
+    try:
+        lib.jl_atexit_hook(0)
+    finally:
+        _LIBJULIA = None
+
+
+def _register_julia_shutdown(lib):
+    global _LIBJULIA
+    global _JULIA_ATEXIT_REGISTERED
+
+    _LIBJULIA = lib
+    lib.jl_atexit_hook.argtypes = [ctypes.c_int]
+    lib.jl_atexit_hook.restype = None
+
+    if not _JULIA_ATEXIT_REGISTERED:
+        atexit.register(shutdown)
+        _JULIA_ATEXIT_REGISTERED = True
 
 
 def invoke_julia(jl_exepath: str, args: list[str], *, supress_errors: bool = True):
@@ -422,6 +460,7 @@ def setup():
     user_set_pyjulia_core = Environment.PYJULIA_CORE
     with tictoc("Julia initialized in {} seconds"):
         jnumpy.init.init_libjulia(_init, experimental_fast_init=True)
+    _register_julia_shutdown(lib)
 
     # to workaround sysimage `__init__`
     if user_set_pyjulia_core:
